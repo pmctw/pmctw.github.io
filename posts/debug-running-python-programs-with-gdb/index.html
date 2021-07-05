@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-tw">
+<head>
+<meta charset="utf-8" />
+<title>在 Linux 環境偵錯 Python 程式 | 單細胞生物專用外部記憶裝置
+</title>
+<script type="application/ld+json">
+{
+    "@context" : "http://schema.org",
+    "@type" : "BlogPosting",
+    "name": "單細胞生物專用外部記憶裝置",
+    "headline": "在 Linux 環境偵錯 Python 程式",
+    "description": "運行中的服務要如何偵錯呢？本文介紹如何在 Linux 環境下使用 GDB 偵錯運行中的 Python 程式。",
+    "inLanguage": "zh-TW",
+    "author": "",
+    "url": "https://pmctw.github.io/posts/debug-running-python-programs-with-gdb/"
+}
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="format-detection" content="telephone=no" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="HandheldFriendly" content="true" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="在 Linux 環境偵錯 Python 程式" />
+<meta property="og:description" content="運行中的服務要如何偵錯呢？本文介紹如何在 Linux 環境下使用 GDB 偵錯運行中的 Python 程式。" />
+<meta property="og:image" content="" />
+<meta property="og:author" content="單細胞生物" />
+<meta property="og:locale" content="zh-tw" />
+
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="在 Linux 環境偵錯 Python 程式" />
+<meta name="twiter:description" content="運行中的服務要如何偵錯呢？本文介紹如何在 Linux 環境下使用 GDB 偵錯運行中的 Python 程式。" />
+<meta name="twitter:image" content="" />
+
+<link rel="canonical" href="https://pmctw.github.io/posts/debug-running-python-programs-with-gdb/" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@100;400&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;900&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap" />
+<link rel="alternate" type="application/atom+xml" href="https://pmctw.github.io/index.xml" title="單細胞生物專用外部記憶裝置">
+
+<style>
+  html {
+    padding: 0;
+    margin: 0;
+    min-height: 100%;
+    font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: linear-gradient(to top, #B721FF, #2AF598, #fec051, #FEE140, #FA709A );
+    background: whitesmoke;
+    background-size: 100vw 100vh;
+    background-repeat: no-repeat;
+    font-family: 'Noto Sans TC', sans-serif;
+    background-repeat: no-repeat;
+    background-size: cover;
+    padding: 0;
+    margin: 0;
+    color: darkslategray;
+  }
+  #container {
+    background: floralwhite;
+    margin: 16px;
+    padding: 32px;
+    min-height: calc(100vh - 96px);
+    border-radius: 4px;
+    box-shadow: 0 0 8px 4px hsl(0, 0%, 0%, 16%);
+  }
+  #content {
+    max-width: 732px;
+    margin: 0 auto;
+  }
+  p {
+    font-size: 20px;
+    margin: 16px 0;
+    line-height: 36px;
+    text-align: justify;
+  }
+  hr, hr:before, hr:after {
+    content: '';
+    display: block;
+    border: 0;
+    width: 4px;
+    height: 4px;
+    background: lightcoral;
+  }
+  hr {
+    position: relative;
+    overflow: visible;
+    margin: 32px auto;
+  }
+  hr:before, hr:after {
+    position: absolute;
+  }
+  hr:before {
+    left: -16px;
+  }
+  hr:after {
+    left: 16px;
+  }
+  header {
+    margin: 32px 0 48px 0;
+    text-align: center;
+  }
+  header time {
+    display: block;
+    margin: 16px 0;
+  }
+  h1 {
+    font-size: 36px;
+    font-family: 'Noto Serif TC', serif;
+    font-weight: 900;
+    margin: 0;
+    color: crimson;
+  }
+  h2 {
+    font-size: 24px;
+    font-family: 'Noto Serif TC', serif;
+    font-weight: 700;
+    margin: 20px 0;
+    color: crimson;
+    position: relative;
+  }
+  h2:before {
+    content: '';
+    position: absolute;
+    left: -16px;
+    top: 0;
+    background: crimson;
+    width: 8px;
+    height: 100%;
+  }
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    color: brown;
+    letter-spacing: -1px;
+    background: white;
+  }
+  pre {
+    font-family: 'JetBrains Mono', monospace;
+    border-radius: 4px;
+    padding: 16px;
+    overflow-x: scroll;
+    position: relative;
+    margin: 16px -16px;
+    background: white;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  pre code {
+    background: transparent;
+    letter-spacing: inherit;
+    color: inherit;
+  }
+  nav:before {
+    content: '###';
+    display: block;
+    font-size: 24px;
+    text-align: center;
+    margin: 32px 0;
+    color: lightcoral;
+  }
+  nav {
+    color: gray;
+    text-align: center;
+  }
+  a:link, a:visited, a:active, a code {
+    color: royalblue;
+    text-decoration: none;
+  }
+  a:hover {
+    background: white;
+  }
+
+  @media only screen and (max-width: 800px) {
+    body {
+      background: floralwhite;
+    }
+    #container {
+      margin: 0;
+      padding: 24px;
+    }
+    h1 {
+      font-size: 22px;
+    }
+    h2 {
+      font-size: 16px;
+    }
+    p {
+      font-size: 16px;
+      line-height: 24px;
+    }
+    pre {
+      border-radius: 0;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="container">
+  <div id="content">
+    <article>
+    <header>
+        <h1>在 Linux 環境偵錯 Python 程式</h1>
+        <time>2021-06-27</time>
+    </header>
+    <section>
+        <p>Linux 環境 Python 程式偵錯 (调试/debug) 技巧，除了常見的 print 大法或 logging 之外，尚有相對乏人問津的標準函式庫 pdb 與利用 GDB 等方法。本文簡單分享近期心得 (以 Python 3 及 Debian Linux AMD64 為例)。</p>
+<hr />
+<h2>使用 pdb 進行有預備的偵錯</h2>
+<p>Python 從上古時期就在標準函式庫中提供偵錯工具 <a href="https://docs.python.org/3/library/pdb.html">pdb</a>，若使用 <code>python3 -m pdb hello.py</code> 啟動程式，會進入 pdb 的互動式偵錯介面，可以用 <code>break</code> 指令新增中斷點等。另一方面，也可透過加入 <code>pdb.set_trace()</code> 以在程式執行過程中切換進 pdb 的互動偵錯介面。</p>
+<p>除了使用 pdb，也有人偏好在程式中加入 <code>code.interact()</code> 來喚起 Python <a href="https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop">REPL</a>，簡便的開發環境下亦不失為一種選擇。
+附帶一提，pdb 內部是用 Python 標準函式庫的 <a href="https://docs.python.org/3/library/sys.html#module-sys"><code>sys.settrace</code> 函式</a>來實作偵錯能力。</p>
+<p>總之，上述都是「有預備」的方式，需要在程式執行前就做好偵錯的準備。接著會介紹在沒有預備的情況下，如何偵錯運行中的 Python 程式。</p>
+<h2>使用 GDB 偵錯運行中的 Python 程式 (1)</h2>
+<p>人生很難，當然並非每個需要偵錯的場景都能預先埋點。</p>
+<p>Production 服務跑到一半總會出些毛病，拋出奇怪例外、耗用過多記憶體、做出想破頭都無法理解的行為、踩到死鎖、長出莫須有的子行程等等，之前的貼文也有介紹過。Python 並沒有提供在運行過程中接上去 (attach) 偵錯的工具，在 LInux 環境下最直覺的偵錯瑞士刀便是老朋友 <a href="https://www.gnu.org/software/gdb/">GDB</a>。本段落操作可用 Docker 映像檔 <a href="https://hub.docker.com/layers/python/library/python/3.9.5-buster/images/sha256-3dc59dc018dcdb8a1e167e37a43d9dbb32dd063d86e5373f6b034259a4ad2b67?context=explore"><code>python:3.9.5-buster</code></a> 重現。</p>
+<p>感謝 Python 是一門直譯式語言，並且其 CPython 實作相當直觀、沒有繁雜的 <a href="https://en.wikipedia.org/wiki/Just-in-time_compilation">JIT</a>，讓 GDB 偵錯輕鬆不少。</p>
+<p>開始之前，先使用 <code>file</code> 指令確定環境內的 CPython 執行檔是否包含偵錯資訊 (<code>debug_info</code>)：</p>
+<pre><code># file $(readlink -f $(which python))
+/usr/local/bin/python3.9: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=60a1c39f51975667c51141e444d5d537153a303b, with debug_info, not stripped
+</code></pre>
+<p>若有，則直接從對應版本的 CPython 原始碼倉庫 (例如這裡用的 tag 為 <code>v3.9.5</code>) 取出 <a href="https://github.com/python/cpython/blob/v3.9.5/Tools/gdb/libpython.py"><code>Tools/gdb/libpython.py</code></a>，並將此檔案複製進需要偵錯的環境內。GDB 7 之後內建了 Python 支援，於是 CPython 開發者們提供了此腳本，簡化 GDB 偵錯流程。</p>
+<p>萬事俱備後，使用 <code>gdb -p &lt;PID&gt;</code> 接上目標行程 (process)，順利的話 GDB 會停下目標行程，此時便可在 GDB 內輸入 <code>source /path/to/libpython.py</code> 來載入上述腳本。然後可使用 <code>py-bt-full</code> 指令來查看 Python 的<a href="https://en.wikipedia.org/wiki/Call_stack">呼叫堆疊 (call stack)</a>。</p>
+<p>範例如下所示：</p>
+<pre><code># gdb -p 472
+...
+Attaching to process 472
+...
+(gdb) source /tmp/libpython.py
+(gdb) py-bt-full
+#7 Frame 0x7f964454e900, for file /tmp/hello.py, line 7, in greetings (counter=7)
+    time.sleep(1)
+#13 Frame 0x7f96444bf040, for file /tmp/hello.py, line 10, in main ()
+    greetings()
+#20 Frame 0x5586756edc40, for file /tmp/hello.py, line 13, in &lt;module&gt; ()
+    main()
+</code></pre>
+<p>詳細用法可參考 <a href="https://devguide.python.org/gdb/">Python 官方寫給 CPython 本體開發者的文件</a>。或是直接查閱 <code>libpython.py</code> 原始碼，它是一個不到 2000 行的 Python 腳本，簡單暴力的小工具，並沒有想像中難懂，推薦從 <a href="https://github.com/python/cpython/blob/0a7dcbdb13f1f2ab6e76e1cff47e80fb263f5da0/Tools/gdb/libpython.py#L1854"><code>PyBacktraceFull#invoke</code></a> 開始閱讀。</p>
+<h2>使用 GDB 偵錯運行中的 Python 程式 (2)</h2>
+<p>人生真的很難。有時候服務跑在千奇百怪的環境，除了無法預先埋點外，也不是每次都能遇上有內建偵錯資訊的 CPython 執行檔。本段落操作可以 <a href="https://hub.docker.com/layers/debian/library/debian/buster/images/sha256-5625c115ad881f19967a9b66416f8d40710bb307ad607d037f8ad8289260f75f?context=explore"><code>debian:buster</code></a> 映像檔重現。我們以指令 <code>apt update &amp;&amp; apt install -y python3</code> 來安裝 Python 環境，模仿某些 production 環境的狀況。</p>
+<p>我們先確認一下 Python 版本，並且如法炮製透過 <code>file</code> 指令確認是否有包含偵錯資訊。看到是 <code>Python 3.7.3</code>，並可以看到 <code>stripped</code> 字樣，指的是這份執行檔在打包的過程中，已移除偵錯資訊。</p>
+<pre><code># python3 --version
+Python 3.7.3
+# file $(readlink -f $(which python3))
+/usr/bin/python3.7: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=9921c75e6930d3e9d9fa8c942aca9dc4500bb65f, stripped
+好的，就是這種關鍵時刻，才能展現魔法師的價值。起手式一樣先 gdb -p &lt;PID&gt; 接上目標行程，隨後下個 bt 指令看原生 call stack。
+(gdb) bt
+#0  0x00007fd019b70ff7 in __GI___select (...)
+#1  0x00000000004e8965 in ?? ()
+#2  0x00000000005d8711 in _PyMethodDef_RawFastCallKeywords ()
+#3  0x000000000054b330 in ?? ()
+#4  0x00000000005524cd in _PyEval_EvalFrameDefault ()
+...
+#15 0x000000000065468e in _Py_UnixMain ()
+#16 0x00007fd019aa409b in __libc_start_main (...) at ../csu/libc-start.c:308
+#17 0x00000000005e0e8a in _start ()
+</code></pre>
+<p>注意第 4 個 frame 寫著 <code>_PyEval_EvalFrameDefault</code>，這便是 CPython 中<a href="https://docs.python.org/3/c-api/veryhigh.html#c.PyEval_EvalFrameEx">每個 Python 函式呼叫必經之路</a>。讀者可參照 <a href="https://github.com/python/cpython/blob/ef4ec6ed12d6c6200a85068f60483723298b6ff4/Python/ceval.c#L551">CPython 原始碼</a>，這裡我們不細究這個函式的內容，只需留意它的第一個參數 <a href="https://github.com/python/cpython/blob/ef4ec6ed12d6c6200a85068f60483723298b6ff4/Include/frameobject.h#L17"><code>PyFrameObject *f</code></a>。</p>
+<p>第一步，我們要定位 CPython 的運行資訊。根據 System V amd64 (x86_64) 的<a href="https://en.wikipedia.org/wiki/Calling_convention">呼叫約定 (calling convention)</a>，Linux 環境下<a href="https://en.wikipedia.org/wiki/X86_calling_conventions#System_V_AMD64_ABI">呼叫函式時會將第一個引數放在 rdi 暫存器</a>。</p>
+<p>讓我們在 GDB 反組譯 (disassemble) 這個函式：</p>
+<pre><code>(gdb) disas _PyEval_EvalFrameDefault, +20
+Dump of assembler code from 0x54e0b0 to 0x54e0c4:
+   0x000000000054e0b0 &lt;_PyEval_EvalFrameDefault+0&gt;: push   %r15
+   0x000000000054e0b2 &lt;_PyEval_EvalFrameDefault+2&gt;: push   %r14
+   0x000000000054e0b4 &lt;_PyEval_EvalFrameDefault+4&gt;: push   %r13
+   0x000000000054e0b6 &lt;_PyEval_EvalFrameDefault+6&gt;: mov    %rdi,%r13
+   0x000000000054e0b9 &lt;_PyEval_EvalFrameDefault+9&gt;: push   %r12
+   0x000000000054e0bb &lt;_PyEval_EvalFrameDefault+11&gt;: push   %rbp
+   0x000000000054e0bc &lt;_PyEval_EvalFrameDefault+12&gt;: push   %rbx
+   0x000000000054e0bd &lt;_PyEval_EvalFrameDefault+13&gt;: sub    $0xf8,%rsp
+   ...
+</code></pre>
+<p>可以看到 <code>mov %rdi,%r13</code> 這行 <a href="https://web.stanford.edu/class/archive/cs/cs107/cs107.1216/guide/x86-64.html">MOV 組語指令</a>，代表複製 <code>rdi</code> 暫存器的內容到 <code>r13</code> 暫存器，由於參數 <code>*f</code> 在此函式內很常被參考，我們晚點賭賭看 <code>r13</code> 暫存器會一直存放著 <code>*f</code> 的值 (若要確認，請讀過一次 <code>_PyEval_EvalFrameDefault</code> 完整的反組譯內容即可)。</p>
+<p>第二步，我們要偷吃步，挪用同樣版本的 CPython 的偵錯資訊來協助我們偵錯。以這裡的例子，可以從 <a href="https://hub.docker.com/layers/python/library/python/3.7.3-stretch/images/sha256-e3e087ca7fe013554b3a8b8d4088ab33a9f13af85b5c3f37cd4e69a8e53f14e1?context=explore"><code>python:3.7.3-stretch</code></a> 映像檔裡萃取出 Python 的共享函式庫 <code>/usr/local/lib/libpython3.7m.so.1.0</code>，複製到我們的環境上，回到 GDB 載入它的<a href="https://en.wikipedia.org/wiki/Symbol_table">符號表 (symbol table)</a>。</p>
+<pre><code>(gdb) ptype PyFrameObject
+No symbol &quot;PyFrameObject&quot; in current context.
+(gdb) add-symbol-file /opt/hello/libpython3.7m.so.1.0
+add symbol table from file &quot;/opt/hello/libpython3.7m.so.1.0&quot;
+(y or n) y
+Reading symbols from /opt/hello/libpython3.7m.so.1.0...done.
+(gdb) ptype PyFrameObject
+type = struct _frame {
+    PyVarObject ob_base;
+    struct _frame *f_back;
+    PyCodeObject *f_code;
+    …
+}
+</code></pre>
+<p>如上所示，載入偷來的符號表後，GDB 已經可以解析出 <code>PyFrameObject</code> 這個型別的定義 (也就是上述 <code>_PyEval_EvalFrameDefault</code> 函式的第一個參數)。</p>
+<p>此時可以試著載入前文提到的 <code>libpython.py</code> (記得從正確版本的 CPython 原始碼倉庫中取得，本段落是 <code>v3.7.3</code>)，會發現 GDB 無法定位 Python 的 frame 資訊，這是因為 GDB 沒有足夠的資訊來推斷引數 <code>*f</code> 的值。</p>
+<pre><code>(gdb) source /opt/hello/libpython.py
+(gdb) py-bt-full
+#4 (unable to read python frame information)
+#6 (unable to read python frame information)
+#8 (unable to read python frame information)
+</code></pre>
+<p>第三步，我們要利用第一步的猜測 (<code>*f</code> 存放在 <code>r13</code> 暫存器)，加工 <code>libpython.py</code> 以幫助它讀取 <code>*f</code> 的值。找到 <code>f = self._gdbframe.read_var('f')</code> 這行 (還有一行類似的，在附近記得一起改)，將它的邏輯替換成「讀不到區域變數 <code>f</code> 就去讀 <code>r13</code> 暫存器」，如下所示：</p>
+<pre><code>try:
+    f = self._gdbframe.read_var('f')
+except ValueError:
+    f = self._gdbframe.read_register('r13')
+</code></pre>
+<p>此時再回到 GDB 重新戴入 <code>libpython.py</code>，便發現中獎了 (jackpot!!)，<code>py-bt-full</code> 指令已經可以印出 Python call stack 的詳細資訊，連區域變數 (locals) 都能找到。</p>
+<pre><code>(gdb) source /opt/hello/libpython.py
+(gdb) py-bt-full
+#4 Frame 0x2390248, for file hello.py, line 8, in greetings (counter=128, my_key='-zGCzallTSAGcw')
+#6 Frame 0x7fd0198ab048, for file hello.py, line 11, in main ()
+#8 Frame 0x7fd0199e19f8, for file hello.py, line 14, in &lt;module&gt; ()
+</code></pre>
+<hr />
+<h2>附錄 A：若目標行程為多執行緒</h2>
+<p>GDB 在接上目標行程時，會暫停所有執行緒運行，可以使用 info threads 指令印出所有執行緒資訊。本文不探討 GDB 用法，我也並不熟悉 GDB，網路上有很多 GDB 教學，如<a href="https://www.cs.cmu.edu/~gilpin/tutorial/">這裡</a>、<a href="https://www.cs.umd.edu/~srhuang/teaching/cmsc212/gdb-tutorial-handout.pdf">這裡</a>、<a href="https://www.tutorialspoint.com/gnu_debugger/index.htm">這裡</a>，請自行參考。</p>
+<pre><code>(gdb) info threads
+  Id   Target Id                                 Frame
+* 1    Thread 0x7fd019a7d740 (LWP 794) &quot;python3&quot; 0x00007fd019b70ff7 in __GI___select (nfds=0, readfds=0x0, writefds=0x0, exceptfds=0x0, timeout=0x7ffde3088e60)
+    at ../sysdeps/unix/sysv/linux/select.c:41
+</code></pre>
+<h2>附錄 B：在 GDB 裡徒手拆解 Python call stack</h2>
+<p>前文介紹如何使用 CPython 提供的 <code>libpython.py</code> 來印出 call stack 等資訊。此段落簡述 <code>libpython.py</code> 的運作原理與示範如何徒手拆解 call stack。</p>
+<p>如同前文所述，每個 Python 函式呼叫都會經過 <code>_PyEval_EvalFrameDefault</code> (正確來說是 <code>PyEval_EvalFrameEx</code>)，它的參數 <code>*f</code> 指到 <code>PyFrameObject</code> 結構，裡面包含 <code>*co_code</code> 成員，檢視 CPython 原始碼後可以發現它指到 <a href="https://github.com/python/cpython/blob/769d7d0c66c5b86e2dd29b9ce67ac2daaab1bb38/Include/cpython/code.h#L30"><code>PyCodeObject</code> 結構</a>，裡面包含了 <code>*co_name</code> 與 <code>*co_filename</code> 成員，分別代表目前 frame 對應的函式名稱，以及定義此函式的檔案 import 路徑 。</p>
+<p>亦如同前文所述，經由反組譯 <code>_PyEval_EvalFrameDefault</code> 我們可以知道 <code>r13</code> 存著 <code>*f</code> 的值 (當然在不同環境可能有不同行為)，我們可以透過前文技巧偷吃符號表來獲取 <code>PyFrameObject</code> 與其它結構的定義資訊，也可以用 offset 計算。</p>
+<p>我們感興趣的 <code>co_name</code> 和 <code>co_filename</code> 在 Python 3 多數情況可能指到 <a href="https://github.com/python/cpython/blob/769d7d0c66c5b86e2dd29b9ce67ac2daaab1bb38/Include/cpython/unicodeobject.h#L236"><code>PyUnicodeObject</code> 結構</a>，細節有點複雜 (因為要處理編碼差異) 這裡不提，我們的函式名稱與檔案路徑多半都由單純的 ASCII 字元組成，可利用 GDB 的 <code>x</code> 指令印出字串內容 (記得先用 <code>frame</code> 指令切換到包含 <code>_PyEval_EvalFrameDefault</code> 的 frame)：</p>
+<pre><code>(gdb) bt
+...
+#4  0x00000000005524cd in _PyEval_EvalFrameDefault ()
+...
+(gdb) frame 4
+#4  0x00000000005524cd in _PyEval_EvalFrameDefault ()
+(gdb) x/1s (((PyASCIIObject*)(((PyFrameObject*)$r13)-&gt;f_code-&gt;co_name))+1)
+0x7fd01993c760: &quot;greetings&quot;
+(gdb) x/1s (((PyASCIIObject*)(((PyFrameObject*)$r13)-&gt;f_code-&gt;co_filename))+1)
+0x7fd01993c6e0: &quot;hello.py&quot;
+</code></pre>
+<p>可以得到和前文一樣的結果，<code>frame 4</code> 身處於 <code>hello.py</code> 檔案的 <code>greetings</code> 函式內。眼尖的讀者會發現有個 <code>+1</code>，是因為 Python 直接將字串內容放在 <code>PyASCIIObject</code> 的後方。</p>
+<p>如何判斷 <code>co_name</code> 指到的真正型別與如何解析字串內容存放位置？請閱讀 <code>libpython.py</code> 的 <a href="https://github.com/python/cpython/blob/ca2009d72a52a98bf43aafa9ad270a4fcfabfc89/Tools/gdb/libpython.py#L1208"><code>PyUnicodeObjectPtr#proxyval</code> 函式內容</a>，一看就懂了。</p>
+<h2>附錄 C：若在 Python 2.7 環境</h2>
+<p>大同小異，差別只在 Python 2.7 沒有 <code>_PyEval_EvalFrameDefault</code>，在 GDB 裡 <code>bt</code> 指令看到的會是 <code>PyEval_EvalFrameEx</code>。然後 <code>co_name</code> 與 <code>co_filename</code> 指到的都是單純的 <a href="https://github.com/python/cpython/blob/8d21aa21f2cbc6d50aab3f420bb23be1d081dac4/Include/stringobject.h#L35"><code>PyStringObject</code> 結構</a>，字串存放位置是該結構的 <code>ob_sval</code> 成員所在的 offset。</p>
+<h2>附錄 D：注入程式碼至運行中的 Python 執行緒</h2>
+<p>本文開頭有提及 CPython 沒有內建偵錯運行中程式的方法，坊間其實有不少專案在做類似的事，例如 <a href="https://github.com/google/pyringe">pyringe</a> 與 <a href="https://github.com/lmacken/pyrasite">pyrasite</a>，它們都是用 GDB 可以在運行中行程呼叫指定函式的能力來將 Python 程式碼注入進行標行程。很可惜這些專案都年久失修，在未經修改的狀態下沒有用。</p>
+<p>介紹一個我從 pyrasite 學到的黑魔法，利用 GDB 命令列參數注入 Python 程式碼：</p>
+<pre><code># gdb -p &lt;PID&gt; -batch -eval-command='call (int)PyGILState_Ensure()' -eval-command='call (int)PyRun_SimpleString(&quot;import pdb; pdb.set_trace()&quot;)' -eval-command='call (int)PyGILState_Release($1)''
+</code></pre>
+<p>巧妙利用 <a href="https://docs.python.org/3/c-api/veryhigh.html#c.PyRun_SimpleString"><code>PyRun_SimpleString</code></a> 讓目標執行緒進入 pdb 的互動式除錯介面。不過我對 CPython 的瞭解不夠深，不確定這樣是否會玩壞哪裡的狀態導致目標行程在之後出現不預期的行為。</p>
+<h2>附錄 E：在 macOS 上使用 Docker 作實驗</h2>
+<p><a href="https://hub.docker.com/editions/community/docker-ce-desktop-mac">Docker Desktop for Mac</a> 其實是基於 macOS 內建的 <a href="https://developer.apple.com/documentation/hypervisor">Hypervisor.framework</a>，用 <a href="https://github.com/moby/hyperkit">HyperKit</a> 跑了一個輕量 Linux 虛擬機，然後在該虛擬機上跑 Docker 容器 (containers)，不像 Linux 是由作業系統原生支援容器。</p>
+<p>這樣環境內，跑起來的 Docker 容器內預設是不能 <a href="https://man7.org/linux/man-pages/man2/ptrace.2.html"><code>ptrace</code></a> 其它行程的，需要在啟動容器時加上額外的命令列引數來解除限制：</p>
+<pre><code>docker run --rm -it --cap-add=SYS_PTRACE --security-opt seccomp=unconfined debian:buster
+</code></pre>
+    </section>
+</article>
+<nav>
+    <a href="../../">&lt;文章列表 /&gt;</a>
+</nav>
+</div>
+</div>
+</body>
+</html>

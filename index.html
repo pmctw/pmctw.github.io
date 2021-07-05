@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-tw">
+<head>
+<meta charset="utf-8" />
+<title>單細胞生物專用外部記憶裝置</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="format-detection" content="telephone=no" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="HandheldFriendly" content="true" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@100;400&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;900&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap" />
+<link rel="alternate" type="application/atom+xml" href="https://pmctw.github.io/index.xml" title="單細胞生物專用外部記憶裝置">
+
+<style>
+  html {
+    padding: 0;
+    margin: 0;
+    min-height: 100%;
+    font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: linear-gradient(to top, #B721FF, #2AF598, #fec051, #FEE140, #FA709A );
+    background: whitesmoke;
+    background-size: 100vw 100vh;
+    background-repeat: no-repeat;
+    font-family: 'Noto Sans TC', sans-serif;
+    background-repeat: no-repeat;
+    background-size: cover;
+    padding: 0;
+    margin: 0;
+    color: darkslategray;
+  }
+  #container {
+    background: floralwhite;
+    margin: 16px;
+    padding: 32px;
+    min-height: calc(100vh - 96px);
+    border-radius: 4px;
+    box-shadow: 0 0 8px 4px hsl(0, 0%, 0%, 16%);
+  }
+  #content {
+    max-width: 732px;
+    margin: 0 auto;
+  }
+  p {
+    font-size: 20px;
+    margin: 16px 0;
+    line-height: 36px;
+    text-align: justify;
+  }
+  hr, hr:before, hr:after {
+    content: '';
+    display: block;
+    border: 0;
+    width: 4px;
+    height: 4px;
+    background: lightcoral;
+  }
+  hr {
+    position: relative;
+    overflow: visible;
+    margin: 32px auto;
+  }
+  hr:before, hr:after {
+    position: absolute;
+  }
+  hr:before {
+    left: -16px;
+  }
+  hr:after {
+    left: 16px;
+  }
+  header {
+    margin: 32px 0 48px 0;
+    text-align: center;
+  }
+  header time {
+    display: block;
+    margin: 16px 0;
+  }
+  h1 {
+    font-size: 36px;
+    font-family: 'Noto Serif TC', serif;
+    font-weight: 900;
+    margin: 0;
+    color: crimson;
+  }
+  h2 {
+    font-size: 24px;
+    font-family: 'Noto Serif TC', serif;
+    font-weight: 700;
+    margin: 20px 0;
+    color: crimson;
+    position: relative;
+  }
+  h2:before {
+    content: '';
+    position: absolute;
+    left: -16px;
+    top: 0;
+    background: crimson;
+    width: 8px;
+    height: 100%;
+  }
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    color: brown;
+    letter-spacing: -1px;
+    background: white;
+  }
+  pre {
+    font-family: 'JetBrains Mono', monospace;
+    border-radius: 4px;
+    padding: 16px;
+    overflow-x: scroll;
+    position: relative;
+    margin: 16px -16px;
+    background: white;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  pre code {
+    background: transparent;
+    letter-spacing: inherit;
+    color: inherit;
+  }
+  nav:before {
+    content: '###';
+    display: block;
+    font-size: 24px;
+    text-align: center;
+    margin: 32px 0;
+    color: lightcoral;
+  }
+  nav {
+    color: gray;
+    text-align: center;
+  }
+  a:link, a:visited, a:active, a code {
+    color: royalblue;
+    text-decoration: none;
+  }
+  a:hover {
+    background: white;
+  }
+
+  @media only screen and (max-width: 800px) {
+    body {
+      background: floralwhite;
+    }
+    #container {
+      margin: 0;
+      padding: 24px;
+    }
+    h1 {
+      font-size: 22px;
+    }
+    h2 {
+      font-size: 16px;
+    }
+    p {
+      font-size: 16px;
+      line-height: 24px;
+    }
+    pre {
+      border-radius: 0;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="container">
+  <div id="content">
+    <header style="text-align: left;">
+  <h1>單細胞生物專用外部記憶裝置</h1>
+</header>
+
+<style>
+  ul {
+    margin: 0;
+    padding: 0;
+  }
+  ul a:link, ul a:visited, ul a:active ul a:hover {
+    color: darkslategray;
+  }
+  li {
+    list-style-type: none;
+  }
+  li .post {
+    display: block;
+    font-size: 20px;
+    margin-bottom: 32px;
+    border-radius: 4px;
+  }
+  li .post:hover {
+    color: crimson;
+  }
+  li date {
+    font-size: 14px;
+  }
+</style>
+
+<ul>
+  <li>
+      <a href="posts/debug-running-python-programs-with-gdb/">
+        <div class="post">
+          <date>2021-06-27</date>
+          <div class="title">在 Linux 環境偵錯 Python 程式</div>
+        </div>
+      </a>
+    </li>
+  <li>
+      <a href="posts/python-multiprocessing-and-fork-safety/">
+        <div class="post">
+          <date>2021-05-30</date>
+          <div class="title">Python 的多行程範式與衍生安全</div>
+        </div>
+      </a>
+    </li>
+  <li>
+      <a href="posts/javascript-synchronization-and-race-conditions/">
+        <div class="post">
+          <date>2021-05-24</date>
+          <div class="title">探討 JavaScript 的競態條件與同步機制</div>
+        </div>
+      </a>
+    </li>
+  </ul>
+
+</div>
+</div>
+</body>
+</html>

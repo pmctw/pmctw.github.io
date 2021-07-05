@@ -1,0 +1,31 @@
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title>單細胞生物專用外部記憶裝置</title>
+        <link>https://pmctw.github.io</link>
+        <description>單細胞生物專用外部記憶裝置 近期更新</description>
+        <language>zh-tw</language>
+        <lastBuildDate>2021-07-05T22:26:34.612511</lastBuildDate>
+        <atom:link href="https://pmctw.github.io/index.xml" rel="self" type="application/rss+xml"/>
+        <item>
+            <title>在 Linux 環境偵錯 Python 程式</title>
+            <link>https://pmctw.github.io/posts/debug-running-python-programs-with-gdb/</link>
+            <pubDate>2021-06-27T00:00:00</pubDate>
+            <guid>https://pmctw.github.io/posts/debug-running-python-programs-with-gdb/</guid>
+            <description>運行中的服務要如何偵錯呢？本文介紹如何在 Linux 環境下使用 GDB 偵錯運行中的 Python 程式。 ...</description>
+        </item>
+        <item>
+            <title>Python 的多行程範式與衍生安全</title>
+            <link>https://pmctw.github.io/posts/python-multiprocessing-and-fork-safety/</link>
+            <pubDate>2021-05-30T00:00:00</pubDate>
+            <guid>https://pmctw.github.io/posts/python-multiprocessing-and-fork-safety/</guid>
+            <description>本文探討 Python 生態系常用的多行程 (multi-processing) 範式與其相關的衍生安全 (fork safety) 問題。 ...</description>
+        </item>
+        <item>
+            <title>探討 JavaScript 的競態條件與同步機制</title>
+            <link>https://pmctw.github.io/posts/javascript-synchronization-and-race-conditions/</link>
+            <pubDate>2021-05-24T00:00:00</pubDate>
+            <guid>https://pmctw.github.io/posts/javascript-synchronization-and-race-conditions/</guid>
+            <description>大多數開發者的印象中都認為 JavaScript 是一門單執行緒的語言，本文探討 JavaScript 在瀏覽器環境下是否有機會發生競態條件，以及如何利用同步機制來避開競爭。 ...</description>
+        </item>
+        </channel>
+</rss>

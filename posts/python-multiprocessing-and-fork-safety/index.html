@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-tw">
+<head>
+<meta charset="utf-8" />
+<title>Python 的多行程範式與衍生安全 | 單細胞生物專用外部記憶裝置
+</title>
+<script type="application/ld+json">
+{
+    "@context" : "http://schema.org",
+    "@type" : "BlogPosting",
+    "name": "單細胞生物專用外部記憶裝置",
+    "headline": "Python 的多行程範式與衍生安全",
+    "description": "本文探討 Python 生態系常用的多行程 (multi-processing) 範式與其相關的衍生安全 (fork safety) 問題。",
+    "inLanguage": "zh-TW",
+    "author": "",
+    "url": "https://pmctw.github.io/posts/python-multiprocessing-and-fork-safety/"
+}
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="format-detection" content="telephone=no" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="HandheldFriendly" content="true" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Python 的多行程範式與衍生安全" />
+<meta property="og:description" content="本文探討 Python 生態系常用的多行程 (multi-processing) 範式與其相關的衍生安全 (fork safety) 問題。" />
+<meta property="og:image" content="" />
+<meta property="og:author" content="單細胞生物" />
+<meta property="og:locale" content="zh-tw" />
+
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="Python 的多行程範式與衍生安全" />
+<meta name="twiter:description" content="本文探討 Python 生態系常用的多行程 (multi-processing) 範式與其相關的衍生安全 (fork safety) 問題。" />
+<meta name="twitter:image" content="" />
+
+<link rel="canonical" href="https://pmctw.github.io/posts/python-multiprocessing-and-fork-safety/" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@100;400&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;900&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap" />
+<link rel="alternate" type="application/atom+xml" href="https://pmctw.github.io/index.xml" title="單細胞生物專用外部記憶裝置">
+
+<style>
+  html {
+    padding: 0;
+    margin: 0;
+    min-height: 100%;
+    font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: linear-gradient(to top, #B721FF, #2AF598, #fec051, #FEE140, #FA709A );
+    background: whitesmoke;
+    background-size: 100vw 100vh;
+    background-repeat: no-repeat;
+    font-family: 'Noto Sans TC', sans-serif;
+    background-repeat: no-repeat;
+    background-size: cover;
+    padding: 0;
+    margin: 0;
+    color: darkslategray;
+  }
+  #container {
+    background: floralwhite;
+    margin: 16px;
+    padding: 32px;
+    min-height: calc(100vh - 96px);
+    border-radius: 4px;
+    box-shadow: 0 0 8px 4px hsl(0, 0%, 0%, 16%);
+  }
+  #content {
+    max-width: 732px;
+    margin: 0 auto;
+  }
+  p {
+    font-size: 20px;
+    margin: 16px 0;
+    line-height: 36px;
+    text-align: justify;
+  }
+  hr, hr:before, hr:after {
+    content: '';
+    display: block;
+    border: 0;
+    width: 4px;
+    height: 4px;
+    background: lightcoral;
+  }
+  hr {
+    position: relative;
+    overflow: visible;
+    margin: 32px auto;
+  }
+  hr:before, hr:after {
+    position: absolute;
+  }
+  hr:before {
+    left: -16px;
+  }
+  hr:after {
+    left: 16px;
+  }
+  header {
+    margin: 32px 0 48px 0;
+    text-align: center;
+  }
+  header time {
+    display: block;
+    margin: 16px 0;
+  }
+  h1 {
+    font-size: 36px;
+    font-family: 'Noto Serif TC', serif;
+    font-weight: 900;
+    margin: 0;
+    color: crimson;
+  }
+  h2 {
+    font-size: 24px;
+    font-family: 'Noto Serif TC', serif;
+    font-weight: 700;
+    margin: 20px 0;
+    color: crimson;
+    position: relative;
+  }
+  h2:before {
+    content: '';
+    position: absolute;
+    left: -16px;
+    top: 0;
+    background: crimson;
+    width: 8px;
+    height: 100%;
+  }
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    color: brown;
+    letter-spacing: -1px;
+    background: white;
+  }
+  pre {
+    font-family: 'JetBrains Mono', monospace;
+    border-radius: 4px;
+    padding: 16px;
+    overflow-x: scroll;
+    position: relative;
+    margin: 16px -16px;
+    background: white;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  pre code {
+    background: transparent;
+    letter-spacing: inherit;
+    color: inherit;
+  }
+  nav:before {
+    content: '###';
+    display: block;
+    font-size: 24px;
+    text-align: center;
+    margin: 32px 0;
+    color: lightcoral;
+  }
+  nav {
+    color: gray;
+    text-align: center;
+  }
+  a:link, a:visited, a:active, a code {
+    color: royalblue;
+    text-decoration: none;
+  }
+  a:hover {
+    background: white;
+  }
+
+  @media only screen and (max-width: 800px) {
+    body {
+      background: floralwhite;
+    }
+    #container {
+      margin: 0;
+      padding: 24px;
+    }
+    h1 {
+      font-size: 22px;
+    }
+    h2 {
+      font-size: 16px;
+    }
+    p {
+      font-size: 16px;
+      line-height: 24px;
+    }
+    pre {
+      border-radius: 0;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="container">
+  <div id="content">
+    <article>
+    <header>
+        <h1>Python 的多行程範式與衍生安全</h1>
+        <time>2021-05-30</time>
+    </header>
+    <section>
+        <p><a href="../javascript-synchronization-and-race-conditions/">前文探討過 JavaScript 的同步與競爭</a> ，今日和大家簡單聊聊 Python 開發的盲區——衍生安全 (fork safety)！</p>
+<hr />
+<h2>Python 的多行程範式</h2>
+<p>Python 生態系中，由於 <a href="https://github.com/python/cpython">CPython</a> 的<a href="https://en.wikipedia.org/wiki/Global_interpreter_lock">直譯器全域鎖 (GIL)</a> 設計，多執行緖 (multi-threading) 只能<a href="http://tutorials.jenkov.com/java-concurrency/concurrency-vs-parallelism.html">實現並行 (concurrency) 而無法達成平行 (parallelism)</a>，故 Python 中繁重的計算經常利用多行程 (multi-processing) 加速。</p>
+<h2>衍生安全 (fork safety)</h2>
+<p>在類 Unix 系統中，<a href="https://man7.org/linux/man-pages/man2/fork.2.html">fork (衍生)</a> 是最常見的系統呼叫 (system call) 之一，用以創造子行程 (child process)，可以認為此工具乃是建構現代多工電腦系統不可或缺的基石。</p>
+<p>稍有經驗的開發者或許對<a href="https://en.wikipedia.org/wiki/Thread_safety">執行緒安全 (thread safety)</a> 知之甚稔。然後卻對 fork safety 一知半解，或甚至前所未聞。其實它們系出同源，後者描述的是某個行程經由衍生出子行程 (child process) 時，兩者之間的資源競爭與矛盾等問題，今天我們只探討其中一項：<a href="https://en.wikipedia.org/wiki/Deadlock">死鎖 (deadlock)</a>。</p>
+<h2>一個簡單的示範 (PoC)</h2>
+<p>以下這段 Python 3 程式碼，執行十秒後印出 <code>deadlock detected</code>，即代表我們簡單地製造了子行程 deadlock 的狀態。</p>
+<pre><code>import multiprocessing, os, threading, time
+
+
+lock = threading.Lock()
+def routine():
+    if lock.acquire(timeout=10):
+        time.sleep(5)
+        lock.release()
+    else:
+        print('deadlock detected')
+
+
+t = threading.Thread(target=routine)
+p = multiprocessing.Process(target=routine)
+
+
+t.start(); time.sleep(1); p.start()
+t.join(); p.join()
+</code></pre>
+<h2>multiprocessing.Process</h2>
+<p>查閱 <a href="https://github.com/python/cpython/blob/0a7dcbdb13f1f2ab6e76e1cff47e80fb263f5da0/Lib/multiprocessing/context.py#L220">CPython 3.9.5 的原始碼</a>，得知 <code>class Process</code> 在 Linux 上，會從 <code>start()</code> 函式呼叫 <code>self._Popen()</code>，<a href="https://github.com/python/cpython/blob/0a7dcbdb13f1f2ab6e76e1cff47e80fb263f5da0/Lib/multiprocessing/popen_fork.py#L66">再一路經由 <code>ForkProcess._Popen()</code>、<code>popen_fork.Popen._launch()</code> 到 <code>os.fork()</code></a>，對應至由 C 語言實作的 <a href="https://github.com/python/cpython/blob/0a7dcbdb13f1f2ab6e76e1cff47e80fb263f5da0/Modules/clinic/posixmodule.c.h#L2748"><code>os_fork() 函式</code></a>，隨後便呼叫 C 執行期環境 (runtime) 提供的 <a href="https://github.com/python/cpython/blob/0a7dcbdb13f1f2ab6e76e1cff47e80fb263f5da0/Modules/posixmodule.c#L6676"><code>fork()</code> 函式</a>。</p>
+<p>附帶一提，其實 CPython 在 fork 成功後會在子行程執行<a href="https://github.com/python/cpython/blob/0a7dcbdb13f1f2ab6e76e1cff47e80fb263f5da0/Modules/posixmodule.c#L578">以下程式碼</a>，以確保 CPython 自身的內部資源與狀態沒有在親代與子代之間產生矛盾。</p>
+<pre><code>void PyOS_AfterFork_Child(void)
+{
+    _PyRuntimeState *runtime = &amp;_PyRuntime;
+    _PyGILState_Reinit(runtime);
+    _PyEval_ReInitThreads(runtime);
+    _PyImport_ReInitLock();
+    _PySignal_AfterFork();
+    _PyRuntimeState_ReInitThreads(runtime);
+    _PyInterpreterState_DeleteExceptMain(runtime);
+
+
+    run_at_forkers(_PyInterpreterState_GET()-&gt;after_forkers_child, 0);
+}
+</code></pre>
+<h2>fork() 行為</h2>
+<p>在上一小節中，我們的旅程已經走到 C runtime，接著要探討在 fork 過程中作業系統大概做了什麼事，這裡以 Docker 映像檔 <a href="https://hub.docker.com/layers/python/library/python/3.9.5-buster/images/sha256-a7a543ed4dfaf311fd3d44bac5bbb37a0e14fa12a7dc5d266769040011c8c5a3"><code>python:3.9.5-buster</code></a> 的環境為主。</p>
+<p>在 GLIBC 2.28 裡，<code>__libc_fork()</code> 最終所對應的是 <a href="https://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/unix/sysv/linux/arch-fork.h;h=046d9fc60dc1c40f076b30513dd60526c208a3f4;hb=refs/heads/release/2.28/master#l32"><code>clone</code></a> 這個和 <code>fork</code> 十分相似的系統呼叫。而 Linux 4.19 中，<a href="https://github.com/torvalds/linux/blob/84df9525b0c27f3ebc2ebb1864fa62a97fdedb7d/kernel/fork.c#L2267">clone 系統呼叫</a>對應到的 <a href="https://github.com/torvalds/linux/blob/84df9525b0c27f3ebc2ebb1864fa62a97fdedb7d/kernel/fork.c#L2135"><code>_do_fork()</code> 函式</a> 呼叫 <a href="https://github.com/torvalds/linux/blob/84df9525b0c27f3ebc2ebb1864fa62a97fdedb7d/kernel/fork.c#L1628"><code>copy_process()</code></a> <a href="https://github.com/torvalds/linux/blob/84df9525b0c27f3ebc2ebb1864fa62a97fdedb7d/kernel/fork.c#L1707"><code>複製目前的 thread</code></a> (在 kernel 的世界稱為 <code>task_struct</code>)，並且<a href="https://github.com/torvalds/linux/blob/84df9525b0c27f3ebc2ebb1864fa62a97fdedb7d/kernel/fork.c#L1869">複製整個記憶體地址空間</a>。</p>
+<p>Python <code>os.fork()</code> 和 Linux <code>clone</code> 系統呼叫的對應關係，也可以簡單地透過 <a href="https://man7.org/linux/man-pages/man1/strace.1.html">strace</a> 工具驗證：</p>
+<pre><code># strace python3 -c 'import os; os.fork()' 2&gt;&amp;1 | grep -E &quot;fork|clone&quot;
+execve(&quot;/usr/local/bin/python3&quot;, [&quot;python3&quot;, &quot;-c&quot;, &quot;import os; os.fork()&quot;], 0x7ffe2e2f79c0 /* 13 vars */) = 0
+clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0x7f7b09a98a10) = 525
+</code></pre>
+<p>由此可知，⑴ 即使目前的行程有多個執行緒，執行 <code>fork</code> 時只會複製目前 (也就是呼叫 <code>fork</code> 的) 執行緒到子行程裡、⑵ 記憶體內的值 (包含各種鎖與旗標的狀態) 會被複製一份到子行程。</p>
+<h2>真實場景的陷阱１——我的程式沒有鎖啊！</h2>
+<p>在前幾節的 PoC 裡，我們刻意在持有一把鎖的情況下 fork 出子行程，並且讓子行程試圖獲取同一把鎖。由於在子行程內，並不存在釋放鎖的執行緖，因此強行製造出親代與子代的死鎖。</p>
+<p>日常 Python 開發時，你可能會想說，是不是只要我的程式不上鎖，使用 multi-processing 就是安全的？答案顯然是否定的，因為你所引用的第三方套件可能會暗地裡持有鎖 (或其它獨佔資源)，而且你對它並沒有太多認識與控制權。</p>
+<p>例如常見的 <a href="https://pypi.org/project/pymongo/">pymongo</a> 套件，就<a href="https://github.com/mongodb/mongo-python-driver/blob/master/doc/faq.rst#is-pymongo-fork-safe">在其 FAQ 文件中指明了僅管 pymongo 保證 thread-safe，它不是一個 fork-safe 的函式庫</a>，並且解釋：因為 <code>class MongoClient</code> 會在產生多個背景執行緒來監測連線狀態等，這些執行緒們會以 <code>threading.Lock</code> 來保護共享狀態的存取。若我們在其中一個背景執行緒持有鎖的時候呼叫 <code>fork</code>，衍生出來的子行程很有可能遭遇死鎖。</p>
+<p>另一個例子，以下程式碼片段，便是容易在真實場景中踩到的一個坑。它很簡單，只有一個 <code>requests.get()</code> 抓取某個網頁的內容，利用 multi-threading 並行抓取多個網頁也是十分通俗的技巧。倘若要平行化某種計算 (解析網頁內容或是抓取圖片回來處理)，引入 multi-processing 避開 GIL 的封印也是頗為常見。</p>
+<p>這個片段在我的機器上大概有 10% 左右的機率會卡住，此時利用 <a href="https://www.gnu.org/software/gdb/">GDB</a> (配合 CPython 提供的 <a href="https://github.com/python/cpython/blob/bb3e0c240bc60fe08d332ff5955d54197f79751c/Tools/gdb/libpython.py"><code>libpython.py</code></a>) 檢視其 stack 內容，會發現 <code>get()</code> 底層為了建立連線，先呼叫了 Python 的 <code>socket.getaddrinfo()</code>，而隨後進入 GLIBC 的 <a href="https://man7.org/linux/man-pages/man3/getaddrinfo.3.html"><code>getaddrinfo()</code></a>，在其解析域名的過程中，需要<a href="https://sourceware.org/git/?p=glibc.git;a=blob;f=resolv/resolv_conf.c;h=2f0ffbc524136791d3a192470d49901dac3be9b4;hb=refs/heads/release/2.28/master#l124">讀取</a>系統裡 <a href="https://man7.org/linux/man-pages/man5/resolv.conf.5.html"><code>/etc/resolv.conf</code></a> 的設定，而這份設定讀取後是執行緒間的共享資源，因此 GLIBC 利用 <a href="https://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/nptl/libc-lockP.h;h=989fefa370c787ec1e45f713a0a097cb9e19bf28;hb=refs/heads/release/2.28/master#l176"><code>__libc_lock_lock()</code></a> 來同步互斥存取 (順帶一題，這個環境裡它是一個 <a href="https://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/unix/sysv/linux/x86_64/lowlevellock.S;h=71dd740202b1d6501a2ffd929aa99cbd99a019ef;hb=refs/heads/release/2.28/master#l40">futex</a>)。當 GLIBC 持有這個鎖的時候，我們衍生出的子行程自然會遭遇死鎖。</p>
+<p>解析域名 (查詢 DNS) 在應用程式裡是再頻繁不過的操作了，看看多容易踩坑！</p>
+<pre><code>import multiprocessing, os, threading
+import requests
+
+
+def fetch():
+    print('start', os.getpid())
+    requests.get('https://example.org')
+    print('end', os.getpid())
+
+
+t = threading.Thread(target=fetch)
+p = multiprocessing.Process(target=fetch)
+
+
+t.start(); p.start()
+t.join(); p.join()
+</code></pre>
+<h2>真實場景的陷阱２——我的程式沒有多執行緒啊！</h2>
+<p>欸… 好，其實上個小節中提到的 pymongo FAQ 就有說了，你引用的函式庫可能會在背景產生執行緒。這次我們以分散式系統內亦常用的 <a href="https://github.com/dpkp/kafka-python">kafka-python</a> 作個例子，它的 <code>class KafkaConsumer</code> 被實體化 (instantiated) 時，會<a href="https://github.com/dpkp/kafka-python/blob/f19e4238fb47ae2619f18731f0e0e9a3762cfa11/kafka/consumer/group.py#L386">建立一個 <code>class ConsumerCoordinator</code> 的實體</a>，其內會<a href="https://github.com/dpkp/kafka-python/blob/f19e4238fb47ae2619f18731f0e0e9a3762cfa11/kafka/coordinator/base.py#L739">啟動一個 <code>heartbeat_thread</code></a>，它<a href="https://github.com/dpkp/kafka-python/blob/f19e4238fb47ae2619f18731f0e0e9a3762cfa11/kafka/coordinator/base.py#L128">可能對 <code>BaseCoordinator._lock</code> 上鎖</a>。更別說 kafka-python 在嘗試連線到 broker 時也會先<a href="https://github.com/dpkp/kafka-python/blob/f19e4238fb47ae2619f18731f0e0e9a3762cfa11/kafka/conn.py#L334">解析域名</a>了。</p>
+<h2>其它環境</h2>
+<p>Apple macOS，根據 <a href="https://github.com/python/cpython/blob/0a7dcbdb13f1f2ab6e76e1cff47e80fb263f5da0/Lib/multiprocessing/context.py#L314">CPython 原始碼的註解</a>，<a href="https://bugs.python.org/issue33725">在 macOS 10.14 (Mojave) 之後 <code>fork()</code> 不能跑任意程式碼</a> (詳情不明，網路上的資料並不多，至少我找不太到)。於是 CPython 改用 <a href="https://github.com/python/cpython/blob/0a7dcbdb13f1f2ab6e76e1cff47e80fb263f5da0/Modules/_posixsubprocess.c#L613"><code>subprocess_fork_exec()</code></a>，對應到的是 <code>fork()</code> + <a href="https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/execve.2.html"><code>execve()</code></a> 的<a href="https://en.wikipedia.org/wiki/Fork%E2%80%93exec">組合技</a>。為了達成「<code>fork()</code> 之後繼續跑下一行」的效果，CPython 做的是把目前的狀態序列化 (serialize) 之後，用 <code>os.pipe()</code> 傳過去子行程，對方再<a href="https://github.com/python/cpython/blob/0a7dcbdb13f1f2ab6e76e1cff47e80fb263f5da0/Lib/multiprocessing/spawn.py#L78">用一個很有趣的命令列參數接球並跑起來</a>。</p>
+<p>Microsoft Windows，也沒有 fork 的系統服務可以用，於是 CPython 也是用<a href="https://github.com/python/cpython/blob/0a7dcbdb13f1f2ab6e76e1cff47e80fb263f5da0/Lib/multiprocessing/popen_spawn_win32.py#L73">類似上述 macOS 環境的技巧</a>，直接呼叫 Win32 API 的 <a href="https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw"><code>CreateProcessW()</code></a> 建立一個乾淨的子行程，然後<a href="https://github.com/python/cpython/blob/0a7dcbdb13f1f2ab6e76e1cff47e80fb263f5da0/Lib/multiprocessing/spawn.py#L92">利用序列化後的狀態資訊接續之前的工作</a>。</p>
+<p>非常快速讀過 CPython 相關程式碼 (就是說我很可能看漏了)，透過這種方式衍生的子行程應該也只有複製目前的執行緒，因此前述的死鎖陷阱也是會發生的。</p>
+<h2>os.register_at_fork()</h2>
+<p>在 Python 3.7 之後標準函式庫提供了 <a href="https://docs.python.org/3/library/os.html#os.register_at_fork"><code>os.register_at_fork()</code></a> 讓開發者得以註冊 <code>fork()</code> 被呼叫時的 hook functions，多了一些機會可以在設計系統時避開死鎖。例如 CPython 的 <code>logging</code> 模組便利用這個函式，強迫目前執行緖在 fork 前先行持有 <a href="https://github.com/python/cpython/blob/0a7dcbdb13f1f2ab6e76e1cff47e80fb263f5da0/Lib/logging/__init__.py#L235">logging 模組的全域鎖</a>，fork 成功後親代自行解鎖，子代則<a href="https://github.com/python/cpython/blob/0a7dcbdb13f1f2ab6e76e1cff47e80fb263f5da0/Python/thread_pthread.h#L698">透過 <code>_PyThread_at_fork_reinit()</code> 重新產生一把鎖</a>。</p>
+<p>當然啦，CPython 2.7.18 沒有這個函式可以用，<a href="https://github.com/python/cpython/blob/8d21aa21f2cbc6d50aab3f420bb23be1d081dac4/Lib/logging/__init__.py#L201">logging 模組也就沒有處理 fork safety</a>，以下程式碼片段就很有可能卡著死鎖。</p>
+<pre><code>import logging, os, threading
+logging.getLogger().addHandler(logging.StreamHandler())
+
+
+def routine():
+  for _ in range(10):
+    logging.error('hello')
+
+
+t = threading.Thread(target=routine)
+t.start()
+
+
+if os.fork() == 0:
+    routine()
+else:
+    t.join()
+    os.wait()
+</code></pre>
+<hr />
+<h2>所以怎麼辦？</h2>
+<p>本文花了很多篇幅 (以及拐了不少彎) 在解釋 multi-processing 可能踩中的陷阱之一。如同一開始說明，這個坑並不是 Python 獨有，只是因為 Python 先天有 GIL 封印，導致多行程模式可能比其他生態系更常被利用 (或者說誤用)。在網路上搜尋 "fork without exec" 也能找到各類討論，例如<a href="https://news.ycombinator.com/item?id=12302539">這裡</a>、<a href="https://ewontfix.com/7/">這裡</a>、<a href="https://www.microsoft.com/en-us/research/uploads/prod/2019/04/fork-hotos19.pdf">這裡</a>等。</p>
+<p>簡單的解法是，當你的系統設計需要衍生子行程時，在程式啟動後把基礎設施 (跨行程通訊等) 建好之後趕快 fork，然後再開始做其它工作，確保 fork 裡整個程式的環境還很單純。或是，珍惜生命，遠離 multi-processing。</p>
+<p>另一個方向是，Python 3.4 之後為 Unix 平台加入了 <a href="https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods"><code>spawn</code> context 的支援</a>，如同前文所述，這是利用 <code>fork()</code> + <code>execve()</code> 的組合技來得到一個相對乾淨的子行程，詳見 Python 文件說明。</p>
+    </section>
+</article>
+<nav>
+    <a href="../../">&lt;文章列表 /&gt;</a>
+</nav>
+</div>
+</div>
+</body>
+</html>

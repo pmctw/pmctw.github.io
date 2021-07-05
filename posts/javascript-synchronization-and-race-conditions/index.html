@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-tw">
+<head>
+<meta charset="utf-8" />
+<title>探討 JavaScript 的競態條件與同步機制 | 單細胞生物專用外部記憶裝置
+</title>
+<script type="application/ld+json">
+{
+    "@context" : "http://schema.org",
+    "@type" : "BlogPosting",
+    "name": "單細胞生物專用外部記憶裝置",
+    "headline": "探討 JavaScript 的競態條件與同步機制",
+    "description": "大多數開發者的印象中都認為 JavaScript 是一門單執行緒的語言，本文探討 JavaScript 在瀏覽器環境下是否有機會發生競態條件，以及如何利用同步機制來避開競爭。",
+    "inLanguage": "zh-TW",
+    "author": "",
+    "url": "https://pmctw.github.io/posts/javascript-synchronization-and-race-conditions/"
+}
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="format-detection" content="telephone=no" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="HandheldFriendly" content="true" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="探討 JavaScript 的競態條件與同步機制" />
+<meta property="og:description" content="大多數開發者的印象中都認為 JavaScript 是一門單執行緒的語言，本文探討 JavaScript 在瀏覽器環境下是否有機會發生競態條件，以及如何利用同步機制來避開競爭。" />
+<meta property="og:image" content="" />
+<meta property="og:author" content="單細胞生物" />
+<meta property="og:locale" content="zh-tw" />
+
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="探討 JavaScript 的競態條件與同步機制" />
+<meta name="twiter:description" content="大多數開發者的印象中都認為 JavaScript 是一門單執行緒的語言，本文探討 JavaScript 在瀏覽器環境下是否有機會發生競態條件，以及如何利用同步機制來避開競爭。" />
+<meta name="twitter:image" content="" />
+
+<link rel="canonical" href="https://pmctw.github.io/posts/javascript-synchronization-and-race-conditions/" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@100;400&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;900&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap" />
+<link rel="alternate" type="application/atom+xml" href="https://pmctw.github.io/index.xml" title="單細胞生物專用外部記憶裝置">
+
+<style>
+  html {
+    padding: 0;
+    margin: 0;
+    min-height: 100%;
+    font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: linear-gradient(to top, #B721FF, #2AF598, #fec051, #FEE140, #FA709A );
+    background: whitesmoke;
+    background-size: 100vw 100vh;
+    background-repeat: no-repeat;
+    font-family: 'Noto Sans TC', sans-serif;
+    background-repeat: no-repeat;
+    background-size: cover;
+    padding: 0;
+    margin: 0;
+    color: darkslategray;
+  }
+  #container {
+    background: floralwhite;
+    margin: 16px;
+    padding: 32px;
+    min-height: calc(100vh - 96px);
+    border-radius: 4px;
+    box-shadow: 0 0 8px 4px hsl(0, 0%, 0%, 16%);
+  }
+  #content {
+    max-width: 732px;
+    margin: 0 auto;
+  }
+  p {
+    font-size: 20px;
+    margin: 16px 0;
+    line-height: 36px;
+    text-align: justify;
+  }
+  hr, hr:before, hr:after {
+    content: '';
+    display: block;
+    border: 0;
+    width: 4px;
+    height: 4px;
+    background: lightcoral;
+  }
+  hr {
+    position: relative;
+    overflow: visible;
+    margin: 32px auto;
+  }
+  hr:before, hr:after {
+    position: absolute;
+  }
+  hr:before {
+    left: -16px;
+  }
+  hr:after {
+    left: 16px;
+  }
+  header {
+    margin: 32px 0 48px 0;
+    text-align: center;
+  }
+  header time {
+    display: block;
+    margin: 16px 0;
+  }
+  h1 {
+    font-size: 36px;
+    font-family: 'Noto Serif TC', serif;
+    font-weight: 900;
+    margin: 0;
+    color: crimson;
+  }
+  h2 {
+    font-size: 24px;
+    font-family: 'Noto Serif TC', serif;
+    font-weight: 700;
+    margin: 20px 0;
+    color: crimson;
+    position: relative;
+  }
+  h2:before {
+    content: '';
+    position: absolute;
+    left: -16px;
+    top: 0;
+    background: crimson;
+    width: 8px;
+    height: 100%;
+  }
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    color: brown;
+    letter-spacing: -1px;
+    background: white;
+  }
+  pre {
+    font-family: 'JetBrains Mono', monospace;
+    border-radius: 4px;
+    padding: 16px;
+    overflow-x: scroll;
+    position: relative;
+    margin: 16px -16px;
+    background: white;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  pre code {
+    background: transparent;
+    letter-spacing: inherit;
+    color: inherit;
+  }
+  nav:before {
+    content: '###';
+    display: block;
+    font-size: 24px;
+    text-align: center;
+    margin: 32px 0;
+    color: lightcoral;
+  }
+  nav {
+    color: gray;
+    text-align: center;
+  }
+  a:link, a:visited, a:active, a code {
+    color: royalblue;
+    text-decoration: none;
+  }
+  a:hover {
+    background: white;
+  }
+
+  @media only screen and (max-width: 800px) {
+    body {
+      background: floralwhite;
+    }
+    #container {
+      margin: 0;
+      padding: 24px;
+    }
+    h1 {
+      font-size: 22px;
+    }
+    h2 {
+      font-size: 16px;
+    }
+    p {
+      font-size: 16px;
+      line-height: 24px;
+    }
+    pre {
+      border-radius: 0;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="container">
+  <div id="content">
+    <article>
+    <header>
+        <h1>探討 JavaScript 的競態條件與同步機制</h1>
+        <time>2021-05-24</time>
+    </header>
+    <section>
+        <p>大多數開發者的印象中都認為 JavaScript 是一門單執行緒的語言，本文探討 JavaScript 在瀏覽器環境下是否有機會發生競態條件，以及如何利用同步機制來避開競爭。</p>
+<hr />
+<h2>JavaScript 裡會發生<a href="https://en.wikipedia.org/wiki/Race_condition">競態條件</a>嗎？</h2>
+<p>會。坊間一般稱 JavaScript 為非同步 (asynchronous) 的單執行緒 (single-threading) 語言，僅管單執行緒這個說法仍有討論空間，但千萬別天真地以為撰寫 JavaScript 時不需處理同步與競態條件 (race condition)。</p>
+<p>在瀏覽器的世界中，JavaScript 的競爭可以在同一個分頁 (tab) 中產生，也可以在多個分頁間產生。回想一下，競態條件的發生時機在於複數個<a href="https://en.wikipedia.org/wiki/Control_flow">控制流 (control flow)</a> 試圖存取某個共享資源，且無法掌握這些控制流的執行順序時。</p>
+<h2>JavaScript 的控制流</h2>
+<p>對 JavaScript 有一定認識的朋友，自然知道其<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/EventLoop">內部使用事件迴圈 (event loop) 與工作佇列 (task queue) 來安排多個控制流的執行</a>。JavaScript 啟動時，主程式的控制流便是第一個工作，執行時若有非同步的資源操作，例如 <a href="https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API"><code>fetch</code></a> 或 <a href="https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/setTimeout"><code>setTimeout</code></a>，在操作完成時它們會加入更多工作到 task queue，待目前的控制流完成後，event loop 便會依序執行其它 tasks 的控制流。同理，當 <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise"><code>Promise</code></a> 被解決 (settled) 時，其所關聯的處理函式 (handlers) 也會被推入 task queue。</p>
+<p>除了 event loop 和 task queue 之外，必須認識到 JavaScript 引擎內部是有其它執行緒 (worker threads) 在協調外部資源 (如檔案 I/O，網路傳輸等)，這些 threads 完成工作後會建立一個 task，推入 task queue，JavaScript 的 callback 和 Promise 便是如此得以實現。</p>
+<p>此外，<a href="https://dmitripavlutin.com/javascript-async-await/"><code>async</code>/<code>await</code></a> 是 Promise 的語法糖 (syntactic sugar)，其運作原理自然是和 Promise 相同的。惟看到一個 async function 時，腦中思維必須上升一個境界，明白 await 前後的程式碼分屬於不同控制流，亦即它們不會連續地被執行。</p>
+<h2>一個分頁內的競態條件</h2>
+<p>瀏覽器內每個分頁皆為獨立的 <a href="https://dev.to/luigircruz/javascript-execution-context-38cn">JavaScript 執行環境 (execution context)</a>。只要在同個環境創造兩個控制流，讓它們存取同一個共享變數，製造出 <a href="https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use">TOCTOU</a> 問題，便是真實的 race condition，請見以下程式碼片段 (改編自<a href="https://ubershmekel.medium.com/yes-there-are-race-conditions-in-javascript-ba044571a9140">這裡</a>)：</p>
+<pre><code>let number = 0;
+const times = 10;
+
+
+async function randomSleep() {
+  const sleepMs = Math.random() * 20;
+  await new Promise(resolve =&gt; setTimeout(resolve, sleepMs));
+}
+
+
+async function change(diff) {
+  for (let i = 0; i &lt; times; i++) {
+    await randomSleep();
+    const newNumber = number + diff;
+    await randomSleep();
+    number = newNumber;
+  }
+}
+
+
+console.log('Start with', number);
+Promise
+  .all([change(+1), change(-1)])
+  .then(() =&gt; console.log('End with', number));
+
+
+</code></pre>
+<p>初步判讀，最後的 <code>number</code> 應該被平衡為 0，但讀者可以多試幾次，會發現程式結束時印出非 0 隨機整數。這是因為 <code>change()</code> 函式每次在讀取與寫入共享變數 <code>number</code> 前，都會因為 <code>await</code> 而切換控制流，且我們又刻意透過隨機的 <code>setTimeout</code> 時長來打亂 task 的順序，便成為一個經典的競態條件。</p>
+<p>此實驗當然是我們刻意為之，但現實中也有不少難以確定時長的資源操作，例如 DOM event 與 <code>fetch</code> 等，在操作的 handlers 中若有存取共享變數，亦應格外注意控制流的變換。</p>
+<p>這裡要注意的是，不像現代作業系統裡的搶佔 (preempt)，JavaScript 引擎總是會做完目前的 task 才做下一個，因此如果你的程式碼裡沒有切換控制流，那麼目前 task 內的程式碼可以保證時序，就不需費心思考同步的問題。</p>
+<h2>多個分頁間的競態條件</h2>
+<p>承上所述，瀏覽器中每個分頁都有獨立的 JavaScript 執行環境，基本上彼此無法互相通訊，那怎麼仍會發生 race 呢？這是因為，像是 <a href="https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/cookies">cookies</a> 或 <a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage">localStorage</a> 等資源是可以被多個分頁共享的。若我們將上面的程式碼改寫為使用 localStorage 來存放共享變數，即使兩個分頁都各只有一個控制流，也可以很輕易的製造出 race condition。</p>
+<p>多個分頁間的同步 (synchronization) 可以簡單映射為多執行緒 (multi-threading) 程式的同步模型：使用鎖 (locks)。目前 <a href="https://github.com/WICG/web-locks">Web Locks API</a> 仍在實驗/草案階段，不像作業系統，瀏覽器環境下仍未提供原生的鎖。</p>
+<p>解決方案有多個，一是利用 cookies 或 <a href="https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API">IndexedDB</a> 實作 <a href="https://lamport.azurewebsites.net/pubs/fast-mutex.pdf">Fast Mutex 演算法</a>，如 <a href="https://github.com/ProtonMail/mutex-browser">mutex-browser</a>。二是利用多個分頁關聯到同一個 Service Worker [18] 的特性，將操作共享資源的工作丟給 <a href="https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API">Service Worker</a> 執行，或單純透過 Service Worker 進行同步。</p>
+<h2>JavaScript 事件迴圈的思維陷阱</h2>
+<p>JavaScript 利用 event loop 來切換不同控制流，達成非同步的執行效果。因此，這裡很多朋友會誤以為 JavaScript 可以在背景「同時」執行其它 function，例如 setTimeout 時間到了，不就是會執行那個 callback 嗎？但這裡必須靜下心想清楚，JavaScript 同時間只執行一個 task，而 setTimeout 到期時只是推入另一個 task，它仍然需要等待目前的 task 結束。詳見以下的程式碼：</p>
+<pre><code>console.log('Begin')
+setTimeout(() =&gt; console.log('Timeout'), 0);
+
+
+let sum = 0;
+for (let i = 0; i &lt; 1e10; i++) {
+  sum++;
+}
+
+
+console.log('End')
+</code></pre>
+<p>即使 setTimeout(0) 立刻就到期，它仍然需要等主程式的 task 執行完，因此輸出結果是 Begin 後，等待數秒跑完迴圈，而後依序輸出 End 與 Timeout。</p>
+<h2>Macrotask 與 microtask</h2>
+<p>若我們仔細觀察 setTimeout 與 Promise 的 callback/handler 執行順序，可以發現一些端倪，這是由於<a href="https://v8.dev/blog/fast-async">在 JavaScript 引擎內還會將工作區分為 task (macrotask) 與 microtask</a>。但這裡需要特別注意，這個設計並沒有在 <a href="https://262.ecma-international.org/">ECMAScript 的規格</a> 中指明，而是在 <a href="https://html.spec.whatwg.org/multipage/webappapis.html#event-loops">HTML 規格中的 Event loops 小節</a>說明，並且<a href="https://jakearchibald.com/2015/tasks-microtasks-queues-and-schedules/">在不同的瀏覽器中也可能有不同行為</a>。此外，若讀者有心閱讀 <a href="https://github.com/v8/v8/blob/fca633f3a8f35465b6fb3f2ca6689be842c84657/include/v8.h#L7410:L7418">Google V8 引擎原始碼</a>，可以發現其對於 microtask 的執行時機是有不同策略 (policy) 可以調整，可能因不同環境有不同的設定，造成不同的行為。</p>
+<p>建議在開發 JavaScript 程式時，不要拘泥於 task 與 microtask 的行為，將它們視為實作的一部份 (而非規格)，才不會跌入深淵。坊間有其它文章斬釘截鐵地說明 task 與 microtask，更甚至基於特定行為提出神奇的設計模式，讀者在閱讀這些文章時應保持清晰的思路，莫盡信書。</p>
+<p>但倒是可以看看 <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTML_DOM_API/Microtask_guide">queueMicrotask()</a>。</p>
+    </section>
+</article>
+<nav>
+    <a href="../../">&lt;文章列表 /&gt;</a>
+</nav>
+</div>
+</div>
+</body>
+</html>
