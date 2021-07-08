@@ -64,7 +64,6 @@
     background: floralwhite;
     margin: 16px;
     padding: 32px;
-    min-height: calc(100vh - 96px);
     border-radius: 4px;
     box-shadow: 0 0 8px 4px hsl(0, 0%, 0%, 16%);
   }
@@ -76,7 +75,6 @@
     font-size: 20px;
     margin: 16px 0;
     line-height: 36px;
-    text-align: justify;
   }
   hr, hr:before, hr:after {
     content: '';
@@ -137,6 +135,9 @@
     color: brown;
     letter-spacing: -1px;
     background: white;
+    border: 1px solid lightgray;
+    padding: 0 8px;
+    border-radius: 2px;
   }
   pre {
     font-family: 'JetBrains Mono', monospace;
@@ -153,6 +154,9 @@
     background: transparent;
     letter-spacing: inherit;
     color: inherit;
+    border: none;
+    padding: 0;
+    border-radius: none;
   }
   nav:before {
     content: '###';
@@ -181,9 +185,10 @@
     #container {
       margin: 0;
       padding: 24px;
+      box-shadow: none;
     }
     h1 {
-      font-size: 22px;
+      font-size: 24px;
     }
     h2 {
       font-size: 16px;
@@ -203,7 +208,7 @@
   <div id="content">
     <article>
     <header>
-        <h1>在 Linux 環境偵錯 Python 程式</h1>
+        <a href="."><h1>在 Linux 環境偵錯 Python 程式</h1></a>
         <time>2021-06-27</time>
     </header>
     <section>

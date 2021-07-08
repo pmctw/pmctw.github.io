@@ -64,7 +64,6 @@
     background: floralwhite;
     margin: 16px;
     padding: 32px;
-    min-height: calc(100vh - 96px);
     border-radius: 4px;
     box-shadow: 0 0 8px 4px hsl(0, 0%, 0%, 16%);
   }
@@ -76,7 +75,6 @@
     font-size: 20px;
     margin: 16px 0;
     line-height: 36px;
-    text-align: justify;
   }
   hr, hr:before, hr:after {
     content: '';
@@ -137,6 +135,9 @@
     color: brown;
     letter-spacing: -1px;
     background: white;
+    border: 1px solid lightgray;
+    padding: 0 8px;
+    border-radius: 2px;
   }
   pre {
     font-family: 'JetBrains Mono', monospace;
@@ -153,6 +154,9 @@
     background: transparent;
     letter-spacing: inherit;
     color: inherit;
+    border: none;
+    padding: 0;
+    border-radius: none;
   }
   nav:before {
     content: '###';
@@ -181,9 +185,10 @@
     #container {
       margin: 0;
       padding: 24px;
+      box-shadow: none;
     }
     h1 {
-      font-size: 22px;
+      font-size: 24px;
     }
     h2 {
       font-size: 16px;
@@ -203,7 +208,7 @@
   <div id="content">
     <article>
     <header>
-        <h1>Google 爬蟲的 JS 環境可能產生固定亂數</h1>
+        <a href="."><h1>Google 爬蟲的 JS 環境可能產生固定亂數</h1></a>
         <time>2021-07-08</time>
     </header>
     <section>
@@ -232,7 +237,7 @@
 <p>既然數學觀點來看，碰撞機率低到可以忽略，使用的偽隨機數產生器也沒什麼問題，那我們肯定是遇上什麼怪事，才會碰撞一大把、撞個唏哩嘩啦。最初懷疑是某些廠牌的自製瀏覽器，使用了品質不佳的亂數產生器，但觀察統計比例先排除了這個猜想。</p>
 <p>後來有人把 UUID <code>5f1b428b-53a5-4116-b2a1-2d269dd8e592</code> 整串拿去搜尋，找到了該套件的 GitHub issue <a href="https://github.com/uuidjs/uuid/issues/546">#546 Collision with v4 uuid</a>。</p>
 <p>這才發現，Google 的網頁爬蟲機器人 <a href="https://developers.google.com/search/docs/advanced/crawling/googlebot">Googlebot</a> 竟然連 <code>Crypto.getRandomValues()</code> 產生出來的亂數都可能是固定幾組 (deterministic)。</p>
-<p>簡單搜尋類似的問題，看到 2018 年就有人發現 Googlebot 的 <code>Math.random()</code> 固定輸出 <code>0.14881141134537756</code>。</p>
+<p>簡單搜尋類似的問題，看到 2018 年就<a href="http://www.tomanthony.co.uk/blog/googlebot-javascript-random/">有人發現</a> Googlebot 的 <code>Math.random()</code> 固定輸出 <code>0.14881141134537756</code>。</p>
 <p>Google 官方沒有解釋原因，但其實挺容易猜測，或許是為了執行速度、安全性、或可預測性 (例如某些在客戶端實作的 <a href="https://en.wikipedia.org/wiki/A/B_testing">A/B 測試</a> 或其它基於隨機數的內容)。</p>
 <p>不確定其它密碼學相關的 API，如 <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/generateKey"><code>SubtleCrypto.generateKey()</code></a>，是否在 Googlebot 的環境也會回傳可預測的結果呢？</p>
 <p>PS. 寫這篇文章時也看到 <code>uuid</code> 的 <code>README</code> 在今年二月已經<a href="https://github.com/uuidjs/uuid#duplicate-uuids-googlebot">加上說明這個已知問題 (known issue)</a>，不過 <a href="https://www.npmjs.com/package/uuid?activeTab=readme">npm 上的 README</a> 還沒更新。</p>
