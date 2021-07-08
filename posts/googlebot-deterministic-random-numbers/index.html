@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-tw">
+<head>
+<meta charset="utf-8" />
+<title>Google 爬蟲的 JS 環境可能產生固定亂數 | 單細胞生物專用外部記憶裝置
+</title>
+<script type="application/ld+json">
+{
+    "@context" : "http://schema.org",
+    "@type" : "BlogPosting",
+    "name": "單細胞生物專用外部記憶裝置",
+    "headline": "Google 爬蟲的 JS 環境可能產生固定亂數",
+    "description": "踩雷筆記，用 Crypto.getRandomValues() 產生亂數，結果撞個唏哩嘩啦。",
+    "inLanguage": "zh-TW",
+    "author": "",
+    "url": "https://pmctw.github.io/posts/googlebot-deterministic-random-numbers/"
+}
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="format-detection" content="telephone=no" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="HandheldFriendly" content="true" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Google 爬蟲的 JS 環境可能產生固定亂數" />
+<meta property="og:description" content="踩雷筆記，用 Crypto.getRandomValues() 產生亂數，結果撞個唏哩嘩啦。" />
+<meta property="og:image" content="" />
+<meta property="og:author" content="單細胞生物" />
+<meta property="og:locale" content="zh-tw" />
+
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="Google 爬蟲的 JS 環境可能產生固定亂數" />
+<meta name="twiter:description" content="踩雷筆記，用 Crypto.getRandomValues() 產生亂數，結果撞個唏哩嘩啦。" />
+<meta name="twitter:image" content="" />
+
+<link rel="canonical" href="https://pmctw.github.io/posts/googlebot-deterministic-random-numbers/" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@100;400&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;900&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap" />
+<link rel="alternate" type="application/atom+xml" href="https://pmctw.github.io/index.xml" title="單細胞生物專用外部記憶裝置">
+
+<style>
+  html {
+    padding: 0;
+    margin: 0;
+    min-height: 100%;
+    font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: linear-gradient(to top, #B721FF, #2AF598, #fec051, #FEE140, #FA709A );
+    background: whitesmoke;
+    background-size: 100vw 100vh;
+    background-repeat: no-repeat;
+    font-family: 'Noto Sans TC', sans-serif;
+    background-repeat: no-repeat;
+    background-size: cover;
+    padding: 0;
+    margin: 0;
+    color: darkslategray;
+  }
+  #container {
+    background: floralwhite;
+    margin: 16px;
+    padding: 32px;
+    min-height: calc(100vh - 96px);
+    border-radius: 4px;
+    box-shadow: 0 0 8px 4px hsl(0, 0%, 0%, 16%);
+  }
+  #content {
+    max-width: 732px;
+    margin: 0 auto;
+  }
+  p {
+    font-size: 20px;
+    margin: 16px 0;
+    line-height: 36px;
+    text-align: justify;
+  }
+  hr, hr:before, hr:after {
+    content: '';
+    display: block;
+    border: 0;
+    width: 4px;
+    height: 4px;
+    background: lightcoral;
+  }
+  hr {
+    position: relative;
+    overflow: visible;
+    margin: 32px auto;
+  }
+  hr:before, hr:after {
+    position: absolute;
+  }
+  hr:before {
+    left: -16px;
+  }
+  hr:after {
+    left: 16px;
+  }
+  header {
+    margin: 32px 0 48px 0;
+    text-align: center;
+  }
+  header time {
+    display: block;
+    margin: 16px 0;
+  }
+  h1 {
+    font-size: 36px;
+    font-family: 'Noto Serif TC', serif;
+    font-weight: 900;
+    margin: 0;
+    color: crimson;
+  }
+  h2 {
+    font-size: 24px;
+    font-family: 'Noto Serif TC', serif;
+    font-weight: 700;
+    margin: 20px 0;
+    color: crimson;
+    position: relative;
+  }
+  h2:before {
+    content: '';
+    position: absolute;
+    left: -16px;
+    top: 0;
+    background: crimson;
+    width: 8px;
+    height: 100%;
+  }
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    color: brown;
+    letter-spacing: -1px;
+    background: white;
+  }
+  pre {
+    font-family: 'JetBrains Mono', monospace;
+    border-radius: 4px;
+    padding: 16px;
+    overflow-x: scroll;
+    position: relative;
+    margin: 16px -16px;
+    background: white;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  pre code {
+    background: transparent;
+    letter-spacing: inherit;
+    color: inherit;
+  }
+  nav:before {
+    content: '###';
+    display: block;
+    font-size: 24px;
+    text-align: center;
+    margin: 32px 0;
+    color: lightcoral;
+  }
+  nav {
+    color: gray;
+    text-align: center;
+  }
+  a:link, a:visited, a:active, a code {
+    color: royalblue;
+    text-decoration: none;
+  }
+  a:hover {
+    background: white;
+  }
+
+  @media only screen and (max-width: 800px) {
+    body {
+      background: floralwhite;
+    }
+    #container {
+      margin: 0;
+      padding: 24px;
+    }
+    h1 {
+      font-size: 22px;
+    }
+    h2 {
+      font-size: 16px;
+    }
+    p {
+      font-size: 16px;
+      line-height: 24px;
+    }
+    pre {
+      border-radius: 0;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="container">
+  <div id="content">
+    <article>
+    <header>
+        <h1>Google 爬蟲的 JS 環境可能產生固定亂數</h1>
+        <time>2021-07-08</time>
+    </header>
+    <section>
+        <p>最近有個網頁專案使用 npm 的 <a href="https://www.npmjs.com/package/uuid"><code>uuid</code> 套件</a>產生隨機 <a href="https://en.wikipedia.org/wiki/Universally_unique_identifier">UUID</a>，結果後端統計發現許多不合常理的 UUID 碰撞，挖了程式碼出來看，一查才發現…</p>
+<hr />
+<h2>UUID 的碰撞機率</h2>
+<p>關於 UUID 的規格可查閱 <a href="https://datatracker.ietf.org/doc/html/rfc4122">rfc4122</a>。我們專案使用上述 <code>uuid</code> 套件的 <code>v4</code> API 產生 UUID，其<a href="https://github.com/uuidjs/uuid/blob/1c849da6e164259e72e18636726345b13a7eddd6/src/v4.js#L9">原始碼</a> 十分簡單：產生一個 16 bytes 隨機亂數後，固定其中 6 個 bit (用以辨認 UUID 版本)，實作邏輯大概如下：</p>
+<pre><code>  const buffer = new Uint8Array(16);
+  const rnds = crypto.getRandomValues(buffer);
+
+
+  rnds[6] = (rnds[6] &amp; 0x0f) | 0x40;
+  rnds[8] = (rnds[8] &amp; 0x3f) | 0x80;
+
+
+  const uuid = stringify(rnds);
+  // 'b8f4f06d-7dcb-4868-a77c-0bf3dc5a6a87'
+</code></pre>
+<p>也就是說 128 bits 中有 122 bits 是隨機產生，共有 2<sup>122</sup> 種組合，即 <code>5316911983139663491615228241121378304</code>，約為 5×10<sup>36</sup>。</p>
+<p>假設機率平均分佈，按<a href="https://zh.wikipedia.org/wiki/%E7%94%9F%E6%97%A5%E5%95%8F%E9%A1%8C">生日問題</a>，當產生 2.71×10<sup>18</sup> 個 UUID 時，約有 50% 機率遇到碰撞 (好的，這段我是從 <a href="https://en.wikipedia.org/wiki/Universally_unique_identifier#Collisions">Wikipedia</a> 抄來的)，總之就是機率很小很小，使用「正確的」隨機數產生器很難遇到碰撞。</p>
+<h2>隨機數是如何產生的</h2>
+<p>上述 <code>uuid</code> 套件，若在 Node.js 環境，則使用 Node.js 內建的 <a href="https://nodejs.org/api/crypto.html#crypto_crypto_randomfillsync_buffer_offset_size">crypto.randomFillSync</a> 函式產生亂數；若是在瀏覽器環境，則使用 Web API 的 <a href="https://developer.mozilla.org/en-US/docs/Web/API/Crypto/getRandomValues"><code>Crypto.getRandomValues()</code></a>。</p>
+<p>兩者都是相對安全且趨近於<a href="https://en.wikipedia.org/wiki/Cryptographically-secure_pseudorandom_number_generator">密碼學強度</a>的<a href="https://en.wikipedia.org/wiki/Pseudorandom_number_generator">偽隨機亂數產生器 (PRNG)</a>。並且在其<a href="https://github.com/uuidjs/uuid/blob/1c849da6e164259e72e18636726345b13a7eddd6/src/rng-browser.js#L1">原始碼</a>中寫明，寧願讓程式拋出錯誤，也不會退一步 (fallback) 使用隨機性較差的 <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random"><code>Math.random()</code></a> 函式。</p>
+<p>題外話，這次有忍住衝動，沒有先去開 <a href="https://github.com/chromium/chromium/">Chromium</a> 原始碼來看 <a href="https://github.com/chromium/chromium/blob/a2103ffc8ff16723aeeb46c4924f4efedd1837aa/third_party/blink/renderer/modules/crypto/crypto.cc#L55"><code>Crypto.getRandomValues()</code> 的實作</a> (第一我相信它很可能是對的、第二是我無法檢驗它的數學算法是不是有問題)，不過寫這篇文章時還是去找出來看了一下。</p>
+<h2>來亂的？Googlebot 的 JS 隨機亂數可一點都不亂！</h2>
+<p>既然數學觀點來看，碰撞機率低到可以忽略，使用的偽隨機數產生器也沒什麼問題，那我們肯定是遇上什麼怪事，才會碰撞一大把、撞個唏哩嘩啦。最初懷疑是某些廠牌的自製瀏覽器，使用了品質不佳的亂數產生器，但觀察統計比例先排除了這個猜想。</p>
+<p>後來有人把 UUID <code>5f1b428b-53a5-4116-b2a1-2d269dd8e592</code> 整串拿去搜尋，找到了該套件的 GitHub issue <a href="https://github.com/uuidjs/uuid/issues/546">#546 Collision with v4 uuid</a>。</p>
+<p>這才發現，Google 的網頁爬蟲機器人 <a href="https://developers.google.com/search/docs/advanced/crawling/googlebot">Googlebot</a> 竟然連 <code>Crypto.getRandomValues()</code> 產生出來的亂數都可能是固定幾組 (deterministic)。</p>
+<p>簡單搜尋類似的問題，看到 2018 年就有人發現 Googlebot 的 <code>Math.random()</code> 固定輸出 <code>0.14881141134537756</code>。</p>
+<p>Google 官方沒有解釋原因，但其實挺容易猜測，或許是為了執行速度、安全性、或可預測性 (例如某些在客戶端實作的 <a href="https://en.wikipedia.org/wiki/A/B_testing">A/B 測試</a> 或其它基於隨機數的內容)。</p>
+<p>不確定其它密碼學相關的 API，如 <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/generateKey"><code>SubtleCrypto.generateKey()</code></a>，是否在 Googlebot 的環境也會回傳可預測的結果呢？</p>
+<p>PS. 寫這篇文章時也看到 <code>uuid</code> 的 <code>README</code> 在今年二月已經<a href="https://github.com/uuidjs/uuid#duplicate-uuids-googlebot">加上說明這個已知問題 (known issue)</a>，不過 <a href="https://www.npmjs.com/package/uuid?activeTab=readme">npm 上的 README</a> 還沒更新。</p>
+    </section>
+</article>
+<nav>
+    單細胞生物專用外部記憶裝置 <a href="../../">&lt;文章列表 /&gt;</a>
+</nav>
+</div>
+</div>
+</body>
+</html>
