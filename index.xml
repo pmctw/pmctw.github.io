@@ -4,7 +4,7 @@
         <link>https://pmctw.github.io</link>
         <description>單細胞生物專用外部記憶裝置 近期更新</description>
         <language>zh-tw</language>
-        <lastBuildDate>2021-07-09T22:04:45.377919</lastBuildDate>
+        <lastBuildDate>2021-07-09T22:10:43.851800</lastBuildDate>
         <atom:link href="https://pmctw.github.io/index.xml" rel="self" type="application/rss+xml"/>
         <item>
             <title>Google 爬蟲的 JS 環境可能產生固定亂數</title>
@@ -14,11 +14,11 @@
             <description>踩雷筆記，用 Crypto.getRandomValues() 產生亂數，結果撞個唏哩嘩啦。 ...</description>
         </item>
         <item>
-            <title>在 Linux 環境偵錯 Python 程式</title>
+            <title>在 Linux 環境偵錯運行中的 Python 程式</title>
             <link>https://pmctw.github.io/posts/debug-running-python-programs-with-gdb/</link>
             <pubDate>2021-06-27T00:00:00</pubDate>
             <guid>https://pmctw.github.io/posts/debug-running-python-programs-with-gdb/</guid>
-            <description>運行中的服務要如何偵錯呢？本文介紹如何在 Linux 環境下使用 GDB 偵錯運行中的 Python 程式。 ...</description>
+            <description>運行中的 Python 服務總會出些毛病吧，要如何追查呢？本文介紹在 Linux 環境下使用 GDB 動態偵錯 Python 行程的技巧。 ...</description>
         </item>
         <item>
             <title>Python 的多行程範式與衍生安全</title>

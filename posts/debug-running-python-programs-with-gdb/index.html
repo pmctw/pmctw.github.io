@@ -2,15 +2,15 @@
 <html lang="zh-tw">
 <head>
 <meta charset="utf-8" />
-<title>在 Linux 環境偵錯 Python 程式 | 單細胞生物專用外部記憶裝置
+<title>在 Linux 環境偵錯運行中的 Python 程式 | 單細胞生物專用外部記憶裝置
 </title>
 <script type="application/ld+json">
 {
     "@context" : "http://schema.org",
     "@type" : "BlogPosting",
     "name": "單細胞生物專用外部記憶裝置",
-    "headline": "在 Linux 環境偵錯 Python 程式",
-    "description": "運行中的服務要如何偵錯呢？本文介紹如何在 Linux 環境下使用 GDB 偵錯運行中的 Python 程式。",
+    "headline": "在 Linux 環境偵錯運行中的 Python 程式",
+    "description": "運行中的 Python 服務總會出些毛病吧，要如何追查呢？本文介紹在 Linux 環境下使用 GDB 動態偵錯 Python 行程的技巧。",
     "inLanguage": "zh-TW",
     "author": "",
     "url": "https://pmctw.github.io/posts/debug-running-python-programs-with-gdb/"
@@ -21,15 +21,15 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="HandheldFriendly" content="true" />
 <meta property="og:type" content="article" />
-<meta property="og:title" content="在 Linux 環境偵錯 Python 程式" />
-<meta property="og:description" content="運行中的服務要如何偵錯呢？本文介紹如何在 Linux 環境下使用 GDB 偵錯運行中的 Python 程式。" />
+<meta property="og:title" content="在 Linux 環境偵錯運行中的 Python 程式" />
+<meta property="og:description" content="運行中的 Python 服務總會出些毛病吧，要如何追查呢？本文介紹在 Linux 環境下使用 GDB 動態偵錯 Python 行程的技巧。" />
 <meta property="og:image" content="" />
 <meta property="og:author" content="單細胞生物" />
 <meta property="og:locale" content="zh-tw" />
 
 <meta name="twitter:card" content="summary" />
-<meta name="twitter:title" content="在 Linux 環境偵錯 Python 程式" />
-<meta name="twiter:description" content="運行中的服務要如何偵錯呢？本文介紹如何在 Linux 環境下使用 GDB 偵錯運行中的 Python 程式。" />
+<meta name="twitter:title" content="在 Linux 環境偵錯運行中的 Python 程式" />
+<meta name="twiter:description" content="運行中的 Python 服務總會出些毛病吧，要如何追查呢？本文介紹在 Linux 環境下使用 GDB 動態偵錯 Python 行程的技巧。" />
 <meta name="twitter:image" content="" />
 
 <link rel="canonical" href="https://pmctw.github.io/posts/debug-running-python-programs-with-gdb/" />
@@ -212,7 +212,7 @@
   <div id="content">
     <article>
     <header>
-        <a href="."><h1>在 Linux 環境偵錯 Python 程式</h1></a>
+        <a href="."><h1>在 Linux 環境偵錯運行中的 Python 程式</h1></a>
         <time>2021-06-27</time>
     </header>
     <section>
