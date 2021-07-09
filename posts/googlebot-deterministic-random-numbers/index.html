@@ -150,6 +150,8 @@
     background: white;
     white-space: pre-wrap;
     word-wrap: break-word;
+    border-radius: 2px;
+    border: 1px solid lightgray;
   }
   pre code {
     background: transparent;
@@ -217,9 +219,8 @@
         <p>最近有個網頁專案使用 npm 的 <a href="https://www.npmjs.com/package/uuid"><code>uuid</code> 套件</a>產生隨機 <a href="https://en.wikipedia.org/wiki/Universally_unique_identifier">UUID</a>，結果後端統計發現許多不合常理的 UUID 碰撞，挖了程式碼出來看，一查才發現…</p>
 <hr />
 <h2>UUID 的碰撞機率</h2>
-<p>關於 UUID 的規格可查閱 <a href="https://datatracker.ietf.org/doc/html/rfc4122">rfc4122</a>。我們專案使用上述 <code>uuid</code> 套件的 <code>v4</code> API 產生 UUID，其<a href="https://github.com/uuidjs/uuid/blob/1c849da6e164259e72e18636726345b13a7eddd6/src/v4.js#L9">原始碼</a> 十分簡單：產生一個 16 bytes 隨機亂數後，固定其中 6 個 bit (用以辨認 UUID 版本)，實作邏輯大概如下：</p>
-<pre><code>  const buffer = new Uint8Array(16);
-  const rnds = crypto.getRandomValues(buffer);
+<p>關於 UUID 的規格可查閱 <a href="https://datatracker.ietf.org/doc/html/rfc4122">rfc4122</a>。我們專案使用上述 <code>uuid</code> 套件的 <code>v4</code> API 產生 UUID，其<a href="https://github.com/uuidjs/uuid/blob/1c849da6e164259e72e18636726345b13a7eddd6/src/v4.js#L9">原始碼</a>十分簡單：產生一個 16 bytes 隨機亂數後，固定其中 6 個 bit (用以辨認 UUID 版本)，實作邏輯大概如下：</p>
+<pre><code>  const rnds = getRandomBytes(16);
 
 
   rnds[6] = (rnds[6] &amp; 0x0f) | 0x40;
@@ -251,10 +252,14 @@
 </div>
 </div>
 
+<script>
+  [].forEach.call(document.querySelectorAll('pre code'),
+    x => x.innerText = x.innerText.replaceAll('\n\n\n', '\n\n'));
+</script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-77GZN6EPH3"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
-  function gtag(){
+  function gtag() {
     dataLayer.push(arguments);
   }
   gtag('js', new Date());

@@ -150,6 +150,8 @@
     background: white;
     white-space: pre-wrap;
     word-wrap: break-word;
+    border-radius: 2px;
+    border: 1px solid lightgray;
   }
   pre code {
     background: transparent;
@@ -333,10 +335,14 @@ else:
 </div>
 </div>
 
+<script>
+  [].forEach.call(document.querySelectorAll('pre code'),
+    x => x.innerText = x.innerText.replaceAll('\n\n\n', '\n\n'));
+</script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-77GZN6EPH3"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
-  function gtag(){
+  function gtag() {
     dataLayer.push(arguments);
   }
   gtag('js', new Date());

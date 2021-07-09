@@ -124,6 +124,8 @@
     background: white;
     white-space: pre-wrap;
     word-wrap: break-word;
+    border-radius: 2px;
+    border: 1px solid lightgray;
   }
   pre code {
     background: transparent;
@@ -182,11 +184,7 @@
 <body>
 <div id="container">
   <div id="content">
-    <header style="text-align: left;">
-  <h1>單細胞生物專用外部記憶裝置</h1>
-</header>
-
-<style>
+    <style>
   ul {
     margin: 0;
     padding: 0;
@@ -209,7 +207,29 @@
   li date {
     font-size: 14px;
   }
+  h1 {
+    font-size: 32px;
+    background: crimson;
+    color: whitesmoke;
+    display: inline-block;
+    padding: 8px;
+    margin-left: -8px;
+  }
+  @media only screen and (max-width: 800px) {
+    h1 {
+      font-size: 24px;
+      background: crimson;
+      color: whitesmoke;
+      display: inline-block;
+      padding: 4px;
+      margin-left: -4px;
+    }
+  }
 </style>
+
+<header style="text-align: left;">
+  <h1>單細胞生物專用外部記憶裝置</h1>
+</header>
 
 <ul>
   <li>
@@ -249,10 +269,14 @@
 </div>
 </div>
 
+<script>
+  [].forEach.call(document.querySelectorAll('pre code'),
+    x => x.innerText = x.innerText.replaceAll('\n\n\n', '\n\n'));
+</script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-77GZN6EPH3"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
-  function gtag(){
+  function gtag() {
     dataLayer.push(arguments);
   }
   gtag('js', new Date());

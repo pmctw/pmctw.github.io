@@ -150,6 +150,8 @@
     background: white;
     white-space: pre-wrap;
     word-wrap: break-word;
+    border-radius: 2px;
+    border: 1px solid lightgray;
   }
   pre code {
     background: transparent;
@@ -273,9 +275,9 @@ for (let i = 0; i &lt; 1e10; i++) {
 
 console.log('End')
 </code></pre>
-<p>即使 setTimeout(0) 立刻就到期，它仍然需要等主程式的 task 執行完，因此輸出結果是 Begin 後，等待數秒跑完迴圈，而後依序輸出 End 與 Timeout。</p>
+<p>即使 <code>setTimeout(0)</code> 立刻就到期，它仍然需要等主程式的 task 執行完，因此輸出結果是 <code>Begin</code> 後，等待數秒跑完迴圈，而後依序輸出 <code>End</code> 與 <code>Timeout</code>。</p>
 <h2>Macrotask 與 microtask</h2>
-<p>若我們仔細觀察 setTimeout 與 Promise 的 callback/handler 執行順序，可以發現一些端倪，這是由於<a href="https://v8.dev/blog/fast-async">在 JavaScript 引擎內還會將工作區分為 task (macrotask) 與 microtask</a>。但這裡需要特別注意，這個設計並沒有在 <a href="https://262.ecma-international.org/">ECMAScript 的規格</a> 中指明，而是在 <a href="https://html.spec.whatwg.org/multipage/webappapis.html#event-loops">HTML 規格中的 Event loops 小節</a>說明，並且<a href="https://jakearchibald.com/2015/tasks-microtasks-queues-and-schedules/">在不同的瀏覽器中也可能有不同行為</a>。此外，若讀者有心閱讀 <a href="https://github.com/v8/v8/blob/fca633f3a8f35465b6fb3f2ca6689be842c84657/include/v8.h#L7410:L7418">Google V8 引擎原始碼</a>，可以發現其對於 microtask 的執行時機是有不同策略 (policy) 可以調整，可能因不同環境有不同的設定，造成不同的行為。</p>
+<p>若我們仔細觀察 <code>setTimeout</code> 與 Promise 的 callback/handler 執行順序，可以發現一些端倪，這是由於<a href="https://v8.dev/blog/fast-async">在 JavaScript 引擎內還會將工作區分為 task (macrotask) 與 microtask</a>。但這裡需要特別注意，這個設計並沒有在 <a href="https://262.ecma-international.org/">ECMAScript 的規格</a> 中指明，而是在 <a href="https://html.spec.whatwg.org/multipage/webappapis.html#event-loops">HTML 規格中的 Event loops 小節</a>說明，並且<a href="https://jakearchibald.com/2015/tasks-microtasks-queues-and-schedules/">在不同的瀏覽器中也可能有不同行為</a>。此外，若讀者有心閱讀 <a href="https://github.com/v8/v8/blob/fca633f3a8f35465b6fb3f2ca6689be842c84657/include/v8.h#L7410:L7418">Google V8 引擎原始碼</a>，可以發現其對於 microtask 的執行時機是有不同策略 (policy) 可以調整，可能因不同環境有不同的設定，造成不同的行為。</p>
 <p>建議在開發 JavaScript 程式時，不要拘泥於 task 與 microtask 的行為，將它們視為實作的一部份 (而非規格)，才不會跌入深淵。坊間有其它文章斬釘截鐵地說明 task 與 microtask，更甚至基於特定行為提出神奇的設計模式，讀者在閱讀這些文章時應保持清晰的思路，莫盡信書。</p>
 <p>但倒是可以看看 <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTML_DOM_API/Microtask_guide">queueMicrotask()</a>。</p>
     </section>
@@ -286,10 +288,14 @@ console.log('End')
 </div>
 </div>
 
+<script>
+  [].forEach.call(document.querySelectorAll('pre code'),
+    x => x.innerText = x.innerText.replaceAll('\n\n\n', '\n\n'));
+</script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-77GZN6EPH3"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
-  function gtag(){
+  function gtag() {
     dataLayer.push(arguments);
   }
   gtag('js', new Date());

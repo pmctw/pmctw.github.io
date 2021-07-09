@@ -150,6 +150,8 @@
     background: white;
     white-space: pre-wrap;
     word-wrap: break-word;
+    border-radius: 2px;
+    border: 1px solid lightgray;
   }
   pre code {
     background: transparent;
@@ -236,7 +238,11 @@
 ...
 Attaching to process 472
 ...
+
+
 (gdb) source /tmp/libpython.py
+
+
 (gdb) py-bt-full
 #7 Frame 0x7f964454e900, for file /tmp/hello.py, line 7, in greetings (counter=7)
     time.sleep(1)
@@ -253,8 +259,9 @@ Attaching to process 472
 Python 3.7.3
 # file $(readlink -f $(which python3))
 /usr/bin/python3.7: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=9921c75e6930d3e9d9fa8c942aca9dc4500bb65f, stripped
-好的，就是這種關鍵時刻，才能展現魔法師的價值。起手式一樣先 gdb -p &lt;PID&gt; 接上目標行程，隨後下個 bt 指令看原生 call stack。
-(gdb) bt
+</code></pre>
+<p>好的，就是這種關鍵時刻，才能展現魔法師的價值。起手式一樣先 gdb -p <PID> 接上目標行程，隨後下個 bt 指令看原生 call stack。</p>
+<pre><code>(gdb) bt
 #0  0x00007fd019b70ff7 in __GI___select (...)
 #1  0x00000000004e8965 in ?? ()
 #2  0x00000000005d8711 in _PyMethodDef_RawFastCallKeywords ()
@@ -284,10 +291,14 @@ Dump of assembler code from 0x54e0b0 to 0x54e0c4:
 <p>第二步，我們要偷吃步，挪用同樣版本的 CPython 的偵錯資訊來協助我們偵錯。以這裡的例子，可以從 <a href="https://hub.docker.com/layers/python/library/python/3.7.3-stretch/images/sha256-e3e087ca7fe013554b3a8b8d4088ab33a9f13af85b5c3f37cd4e69a8e53f14e1?context=explore"><code>python:3.7.3-stretch</code></a> 映像檔裡萃取出 Python 的共享函式庫 <code>/usr/local/lib/libpython3.7m.so.1.0</code>，複製到我們的環境上，回到 GDB 載入它的<a href="https://en.wikipedia.org/wiki/Symbol_table">符號表 (symbol table)</a>。</p>
 <pre><code>(gdb) ptype PyFrameObject
 No symbol &quot;PyFrameObject&quot; in current context.
+
+
 (gdb) add-symbol-file /opt/hello/libpython3.7m.so.1.0
 add symbol table from file &quot;/opt/hello/libpython3.7m.so.1.0&quot;
 (y or n) y
 Reading symbols from /opt/hello/libpython3.7m.so.1.0...done.
+
+
 (gdb) ptype PyFrameObject
 type = struct _frame {
     PyVarObject ob_base;
@@ -334,10 +345,16 @@ except ValueError:
 ...
 #4  0x00000000005524cd in _PyEval_EvalFrameDefault ()
 ...
+
+
 (gdb) frame 4
 #4  0x00000000005524cd in _PyEval_EvalFrameDefault ()
+
+
 (gdb) x/1s (((PyASCIIObject*)(((PyFrameObject*)$r13)-&gt;f_code-&gt;co_name))+1)
 0x7fd01993c760: &quot;greetings&quot;
+
+
 (gdb) x/1s (((PyASCIIObject*)(((PyFrameObject*)$r13)-&gt;f_code-&gt;co_filename))+1)
 0x7fd01993c6e0: &quot;hello.py&quot;
 </code></pre>
@@ -364,10 +381,14 @@ except ValueError:
 </div>
 </div>
 
+<script>
+  [].forEach.call(document.querySelectorAll('pre code'),
+    x => x.innerText = x.innerText.replaceAll('\n\n\n', '\n\n'));
+</script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-77GZN6EPH3"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
-  function gtag(){
+  function gtag() {
     dataLayer.push(arguments);
   }
   gtag('js', new Date());
