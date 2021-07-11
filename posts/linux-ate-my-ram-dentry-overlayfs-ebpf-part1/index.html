@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-tw" prefix="og: https://ogp.me/ns#">
+<head>
+<meta charset="utf-8" />
+<title>Linux 容器疑似記憶體洩漏的查案記錄 (1) | 單細胞生物專用外部記憶裝置
+</title>
+<script type="application/ld+json">
+{
+    "@context" : "http://schema.org",
+    "@type" : "BlogPosting",
+    "name": "單細胞生物專用外部記憶裝置",
+    "headline": "Linux 容器疑似記憶體洩漏的查案記錄 (1)",
+    "description": "某個 Web API 微服務容器記憶體用量不停變多，深入追查後發現饒富趣味的背後原因，寫了查案記錄與讀者分享一些 Linux 核心檔案系統的特性。",
+    "inLanguage": "zh-TW",
+    "author": "",
+    "url": "https://pmctw.github.io/posts/linux-ate-my-ram-dentry-overlayfs-ebpf-part1/"
+}
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="format-detection" content="telephone=no" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="HandheldFriendly" content="true" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Linux 容器疑似記憶體洩漏的查案記錄 (1)" />
+<meta property="og:description" content="某個 Web API 微服務容器記憶體用量不停變多，深入追查後發現饒富趣味的背後原因，寫了查案記錄與讀者分享一些 Linux 核心檔案系統的特性。" />
+<meta property="og:image" content="" />
+<meta property="og:author" content="單細胞生物" />
+<meta property="og:locale" content="zh-tw" />
+
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="Linux 容器疑似記憶體洩漏的查案記錄 (1)" />
+<meta name="twiter:description" content="某個 Web API 微服務容器記憶體用量不停變多，深入追查後發現饒富趣味的背後原因，寫了查案記錄與讀者分享一些 Linux 核心檔案系統的特性。" />
+<meta name="twitter:image" content="" />
+
+<link rel="canonical" href="https://pmctw.github.io/posts/linux-ate-my-ram-dentry-overlayfs-ebpf-part1/" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@100;400&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;900&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap" />
+<link rel="alternate" type="application/atom+xml" href="https://pmctw.github.io/index.xml" title="單細胞生物專用外部記憶裝置">
+
+<style>
+  html {
+    padding: 0;
+    margin: 0;
+    min-height: 100%;
+    font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: linear-gradient(to top, #B721FF, #2AF598, #fec051, #FEE140, #FA709A );
+    background: whitesmoke;
+    background-size: 100vw 100vh;
+    background-repeat: no-repeat;
+    font-family: 'Noto Sans TC', sans-serif;
+    background-repeat: no-repeat;
+    background-size: cover;
+    padding: 0;
+    margin: 0;
+    color: darkslategray;
+  }
+  #container {
+    background: floralwhite;
+    margin: 16px;
+    padding: 32px;
+    min-height: calc(100vh - 96px);
+    border-radius: 4px;
+    box-shadow: 0 0 8px 4px hsl(0, 0%, 0%, 16%);
+  }
+  #content {
+    max-width: 732px;
+    margin: 0 auto;
+  }
+  p {
+    font-size: 20px;
+    margin: 16px 0;
+    line-height: 36px;
+  }
+  hr, hr:before, hr:after {
+    content: '';
+    display: block;
+    border: 0;
+    width: 4px;
+    height: 4px;
+    background: lightcoral;
+  }
+  hr {
+    position: relative;
+    overflow: visible;
+    margin: 32px auto;
+  }
+  hr:before, hr:after {
+    position: absolute;
+  }
+  hr:before {
+    left: -16px;
+  }
+  hr:after {
+    left: 16px;
+  }
+  header {
+    margin: 32px 0 48px 0;
+    text-align: center;
+  }
+  header time {
+    display: block;
+    margin: 16px 0;
+  }
+  h1 {
+    font-size: 36px;
+    font-family: 'Noto Serif TC', serif;
+    font-weight: 900;
+    margin: 0;
+    color: crimson;
+  }
+  h2 {
+    font-size: 24px;
+    font-family: 'Noto Serif TC', serif;
+    font-weight: 700;
+    margin: 20px 0;
+    color: crimson;
+    position: relative;
+  }
+  h2:before {
+    content: '';
+    position: absolute;
+    left: -16px;
+    top: 0;
+    background: crimson;
+    width: 8px;
+    height: 100%;
+  }
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    color: brown;
+    letter-spacing: -1px;
+    background: white;
+    border: 1px solid lightgray;
+    padding: 0 8px;
+    border-radius: 2px;
+  }
+  pre {
+    font-family: 'JetBrains Mono', monospace;
+    border-radius: 4px;
+    padding: 16px;
+    overflow-x: scroll;
+    position: relative;
+    margin: 16px -16px;
+    background: white;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    border-radius: 2px;
+    border: 1px solid lightgray;
+  }
+  pre code {
+    background: transparent;
+    letter-spacing: inherit;
+    color: inherit;
+    border: none;
+    padding: 0;
+    border-radius: none;
+  }
+  nav:before {
+    content: '###';
+    display: block;
+    font-size: 24px;
+    text-align: center;
+    margin: 32px 0;
+    color: lightcoral;
+  }
+  nav {
+    color: gray;
+    text-align: center;
+  }
+  a:link, a:visited, a:active, a code {
+    color: royalblue;
+    text-decoration: none;
+  }
+  a:hover {
+    background: white;
+  }
+
+  @media only screen and (max-width: 800px) {
+    body {
+      background: floralwhite;
+    }
+    #container {
+      margin: 0;
+      padding: 24px;
+      box-shadow: none;
+      min-height: 0;
+    }
+    h1 {
+      font-size: 24px;
+    }
+    h2 {
+      font-size: 16px;
+    }
+    p {
+      font-size: 16px;
+      line-height: 24px;
+    }
+    pre {
+      border-radius: 0;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="container">
+  <div id="content">
+    <article>
+    <header>
+        <a href="."><h1>Linux 容器疑似記憶體洩漏的查案記錄 (1)</h1></a>
+        <time>2021-07-11</time>
+    </header>
+    <section>
+        <p>某個 Web API 微服務上線一陣子後，發現它的 Kubernetes pod 記憶體用量不停變多，深入追查後發現背後原因饒富趣味，故寫了本篇查案記錄，與讀者分享。為方便實驗，本文將不以 Kubernetes 示範，而是使用 <a href="https://hub.docker.com/editions/community/docker-ce-desktop-mac">Docker Desktop for Mac</a> 和它搭配的 Linux 核心 (kernel) <code>v5.10.25</code>，以及 <a href="https://hub.docker.com/layers/ubuntu/library/ubuntu/latest/images/sha256-376209074d481dca0a9cf4282710cd30a9e7ff402dea8261acdaaf57a18971dd?context=explore"><code>ubuntu:latest</code></a> 映像檔。</p>
+<pre><code># uname -a
+Linux docker-desktop 5.10.25-linuxkit #1 SMP Tue Mar 23 09:27:39 UTC 2021 x86_64 Linux
+</code></pre>
+<hr />
+<h2>救命，是誰吃了我的記憶體</h2>
+<p>我們的容器提供簡單的 Web API 服務，但運行數日後，監控發現記憶體用量不停變多。首先用 <code>docker stats</code> 指令查看容器的記憶體用量：</p>
+<pre><code>$ docker stats --no-stream sweet_cannon
+CONTAINER ID   NAME           CPU %     MEM USAGE / LIMIT     MEM %     NET I/O          BLOCK I/O        PIDS
+87a2a142a84f   sweet_cannon   0.00%     200.6MiB / 15.64GiB   1.25%     35.3MB / 724kB   289MB / 38.6MB   3
+</code></pre>
+<p>並且進入容器 (<code>docker exec</code>) 查看 <a href="https://man7.org/linux/man-pages/man7/cgroups.7.html">cgroups</a> 的記憶體用量 (關於 <code>memory.stat</code> 的輸出項目，可以閱讀 Docker 文件 <a href="https://docs.docker.com/config/containers/runmetrics/">Runtime metrics</a> 的說明，相當詳盡易懂)。</p>
+<pre><code># cat /etc/issue
+Ubuntu 20.04.2 LTS \n \l
+
+
+# cat /sys/fs/cgroup/memory/memory.usage_in_bytes
+214192128
+
+
+# grep -E 'total_(cache|rss) ' /sys/fs/cgroup/memory/memory.stat
+total_cache 10678272
+total_rss 2162688
+
+
+# ps aux --sort rss
+USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root     62145  0.0  0.0   5904  2924 pts/0    R+   15:59   0:00 ps aux --sort rss
+root         9  0.0  0.0   4240  3448 pts/1    Ss+  10:22   0:00 bash
+root         1  0.0  0.0   4912  4148 pts/0    Ss   10:21   0:00 bash
+</code></pre>
+<p>很奇怪吧！沒看到肥大的行程在吃資源 (對，這個實驗環境連 Gunicorn 都沒有跑 XD)，但 <code>docker stats</code> 卻指出此容器吃掉 <code>200MiB</code> 左右的記憶體，究竟是什麼東西佔用記憶體呢？根據 <code>memory.stat</code> 的資料，檔案快取 (cache) 的確吃了一些，但相較於 <code>200MiB</code> 之譜也有一段距離。</p>
+<p>深入追查，看看 <code>/proc/meminfo</code> 的輸出：</p>
+<pre><code># cat /proc/meminfo
+MemTotal:       16397792 kB
+MemFree:        15067996 kB
+MemAvailable:   15223028 kB
+...
+KReclaimable:     214684 kB
+Slab:             262824 kB
+SReclaimable:     214684 kB
+SUnreclaim:        48140 kB
+...
+</code></pre>
+<p>發現 <code>Slab</code> 項目用掉 <code>262824 kB</code>，並且有很多物件都是可回收 (reclaimable) 的狀態 (<a href="https://en.wikipedia.org/wiki/Slab_allocation">Slab</a> 是種記憶體管理機制，可以粗略理解為 object pool，此處不多加解釋)。</p>
+<p>由於 Linux 核心中透過 Slab allocator 建立各式各樣的物件，我們用 <code>slabtop</code> 指令列出記憶體耗用量較高的前幾名，可以看到 <code>dentry</code> 共吃掉了 <code>197240K</code> 的記憶體：</p>
+<pre><code># slabtop -o -sc | head -n 16
+ Active / Total Objects (% used)    : 1222871 / 1257597 (97.2%)
+ Active / Total Slabs (% used)      : 62927 / 62947 (100.0%)
+ Active / Total Caches (% used)     : 96 / 183 (52.5%)
+ Active / Total Size (% used)       : 249759.05K / 256117.41K (97.5%)
+ Minimum / Average / Maximum Object : 0.02K / 0.20K / 4096.00K
+
+
+  OBJS ACTIVE  USE OBJ SIZE  SLABS OBJ/SLAB CACHE SIZE NAME
+1035510 1035175  99%    0.19K  49310       21    197240K dentry
+ 20042  16116  80%    0.67K   1822       11     14576K shmem_inode_cache
+ 15540  15139  97%    0.58K   2590        6     10360K inode_cache
+ 49686  49518  99%    0.19K   2366       21      9464K kmalloc-192
+   880    860  97%    4.00K    880        1      3520K kmalloc-4k
+  5334   4930  92%    0.56K    762        7      3048K radix_tree_node
+ 20128  20074  99%    0.12K    629       32      2516K kernfs_node_cache
+   610    579  94%    3.44K    305        2      2440K task_struct
+   938    938 100%    2.00K    469        2      1876K kmalloc-2k
+</code></pre>
+<h2>清理快取以檢驗我們的新發現</h2>
+<p>在容器內對 <a href="https://en.wikipedia.org/wiki/Procfs">procfs</a> 寫入清理快取的指令，以確定我們往正確的方向查案 (代號 <code>2</code> 代表回收無所事事的 Slab 物件，詳閱 <a href="https://www.kernel.org/doc/html/latest/admin-guide/sysctl/vm.html?highlight=drop_caches#drop-caches">Linux 核心的說明文件</a>)：</p>
+<pre><code># echo 2 &gt; /proc/sys/vm/drop_caches
+bash: /proc/sys/vm/drop_caches: Read-only file system
+</code></pre>
+<p>……失敗了！無法在容器內的環境清理核心快取 (想想也很合理吧)，於是我們得想辦法進入 host 環境 (如同之前的文章提過，Docker Desktop for Mac 透過輕量化虛擬機運行 Linuxkit 來提供容器服務，於是我們利用 <a href="https://github.com/justincormack/nsenter1"><code>justincormack/nsenter1</code></a> 映像檔來切換到 <code>PID 1</code> 的 namespace)，並且再回收一次快取：</p>
+<pre><code>$ docker run -it --rm --privileged --pid=host justincormack/nsenter1
+/ # cat /etc/issue
+
+
+Welcome to LinuxKit
+
+
+                        ##         .
+                  ## ## ##        ==
+               ## ## ## ## ##    ===
+           /&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;\___/ ===
+          {                       /  ===-
+           \______ O           __/
+             \    \         __/
+              \____\_______/
+
+
+/ # echo 2 &gt; /proc/sys/vm/drop_caches
+/ #
+</code></pre>
+<p>回頭檢視 <code>docker stats</code> 的輸出，可以看到該容器的記憶體耗用量從 <code>200MiB</code> 降到 <code>4MiB</code> 左右，證實了我們的發現：</p>
+<pre><code>$ docker stats --no-stream sweet_cannon
+CONTAINER ID   NAME           CPU %     MEM USAGE / LIMIT     MEM %     NET I/O          BLOCK I/O        PIDS
+87a2a142a84f   sweet_cannon   0.00%     4.098MiB / 15.64GiB   0.03%     35.3MB / 724kB   289MB / 38.6MB   2
+</code></pre>
+<h2>這麼多 dentry 都是哪裡來的</h2>
+<p>深入檢閱 Web API 服務的程式碼，發現它在處理每個請求 (request) 的過程中會寫入暫存檔到 <code>/tmp</code> (用完就刪掉了)，在服務維持高吞吐量的狀況下，有大量小碎檔的讀寫與刪除。</p>
+<p>很快地寫個腳本 <code>spammer.sh</code> 模擬大量檔案操作的行為 (寫入並刪除一百萬個小碎檔，即 <code>trash.1</code> 至 <code>trash.999999</code>)：</p>
+<pre><code>#!/bin/bash
+num=0
+count=1000000
+while (( num &lt; count )); do
+  fname=&quot;trash.$num&quot;
+  echo -n $num &gt; $fname
+  unlink $fname
+  (( num=num+1 ))
+  echo -n .
+done
+</code></pre>
+<p>果然在乾淨的 Docker 容器內，也能重現記憶體被 dentry 吃掉一大堆的狀況。</p>
+<p>dentry 是 Linux 核心<a href="https://www.kernel.org/doc/html/latest/filesystems/vfs.html">檔案系統</a>管理的重要角色之一，使用路徑尋找檔案時，Linux 核心會逐步為每個位置建立一個 dentry 物件，作為該目錄或檔案 (別忘了 Linux 萬物皆檔案) 的 metadata 快取，以此降低操作檔案時需要往檔案系統底層 (或硬體裝置) 查詢資料的頻率。</p>
+<p>由於我們大量創造暫存檔，每個檔案的名字獨一無二，在過程中便會產生非常大量的 dentry 快取。即使我們在暫存檔建立不久就就刪除，但這些 dentry 物件還是被留在 Linux 核心之內。曾經<a href="https://patchwork.kernel.org/project/linux-fsdevel/patch/1502099673-31620-1-git-send-email-wangkai86@huawei.com/">有個華為工程師提出 patch</a> 要在檔案被刪除 (unlink) 之後，盡可能地淘汰無所事事的 dentry，不過 <a href="https://en.wikipedia.org/wiki/Linus_Torvalds">Linus Torvalds</a> 不認為這是個需要被解決的問題 (“So I really don't see what the problem is”)，因此這個 patch 後來也無疾而終 (儘管如此，該 patch 相關討論也值得一讀)。</p>
+<h2>所以這會是個問題嗎</h2>
+<p>如同 Linus Torvalds 和其它開發者在上述的 patch 討論裡提及，這些被挪用去存放快取的記憶體，在其它程式需要記憶體的時候 (memory pressure)，Linux 核心會在背景清理快取物件，釋放更多記憶體供應用程式申請，因此在大多數的場景，dentry 佔用大量記憶體並不構成問題。此行為可以透過 <code>sysctl</code> 參數 <a href="https://www.kernel.org/doc/html/latest/admin-guide/sysctl/vm.html?highlight=vfs_cache_pressure"><code>vm.vfs_cache_pressure</code></a> 來調校。</p>
+<p>然而，現代服務的部署場景中，Linux 容器已成為一門顯學。我們經常使用 <a href="https://en.wikipedia.org/wiki/OverlayFS">OverlayFS</a> 來掛載容器內的檔案系統，容器內的檔案系統操作可能產生大量的 dentry (即使在容器被停止後，這些物件也不見得會被回收)。並且，我們通常會替容器預先設定記憶體用量上限 (<a href="https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits">request/limit</a>)，因此可能在 host 機器遠遠尚未感受到 memory pressure 時，容器的記憶體用量卻已逼近上限。</p>
+<p>實際上應該不是太大問題，但從監控的角度來看會格外惱人。你說寫個 cronjob 定期跑 <code>echo 2 &gt; /proc/sys/vm/drop_caches</code>？什麼，先等等……別逗了。</p>
+<p>可以載入這個 Kubernetes 描述檔 (manifest) 來實際上述行為：</p>
+<pre><code>apiVersion: v1
+kind: Pod
+metadata:
+  name: spammer
+spec:
+  containers:
+    - name: ubuntu
+      image: ubuntu:latest
+      command:
+        - /bin/bash
+        - -c
+        - |
+          num = 0
+          while (( num &lt; 1000000 )); do
+            stat trash.$num 2&gt; /dev/null
+            (( num=num+1 ))
+          done
+      resources:
+        requests:
+          memory: &quot;16Mi&quot;
+        limits:
+          memory: &quot;32Mi&quot;
+</code></pre>
+<hr />
+<h2>案外案，OverlayFS 的奇妙行為</h2>
+<p>在調查過程中，無意間發現一個奇妙的情況，上述大量產生/刪除檔案的 <code>spammer.sh</code>，使用 <code>/tmp</code> 存放檔案時，會在核心中累積數量可觀的 dentry 物件；然而，若是在 <code>/tmp</code> 建立子資料夾 (例如 <code>/tmp/subfolder</code>) 再用它存放暫存檔，就不會有無所事事的 <code>dentry</code> 物件殘留在核心裡。</p>
+<p>前文也提過，在 Docker 容器內 <code>/tmp</code> 並不是 <code>tmpfs</code> ，而是透過 OverlayFS 掛載的資料夾，於是我試著使用 <a href="https://ebpf.io/">eBPF</a> 追蹤這個環境下 <code>dentry</code> 的建立與刪除，想為上述奇妙行為找到一個合理的解釋……欲知後事如何，且待下回分解。</p>
+    </section>
+</article>
+<nav>
+    單細胞生物專用外部記憶裝置 <a href="../../">&lt;文章列表 /&gt;</a>
+</nav>
+</div>
+</div>
+
+<script>
+  [].forEach.call(document.querySelectorAll('pre code'),
+    x => x.innerText = x.innerText.replaceAll('\n\n\n', '\n\n'));
+</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-77GZN6EPH3"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag() {
+    dataLayer.push(arguments);
+  }
+  gtag('js', new Date());
+  gtag('config', 'G-77GZN6EPH3');
+</script>
+</body>
+</html>
